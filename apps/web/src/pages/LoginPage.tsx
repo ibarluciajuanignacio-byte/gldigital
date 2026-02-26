@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../state/auth";
 import "./LoginPage.css";
@@ -13,6 +13,8 @@ const EXIT_DURATION_MS = 1600;
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/";
   const [email, setEmail] = useState("admin@gldigital.local");
   const [password, setPassword] = useState("admin123");
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function LoginPage() {
     exitDoneRef.current = true;
     const t = setTimeout(() => {
       setPhase("done");
-      navigate("/");
+      navigate(from, { replace: true });
     }, EXIT_DURATION_MS);
     return () => clearTimeout(t);
   }, [phase, navigate]);

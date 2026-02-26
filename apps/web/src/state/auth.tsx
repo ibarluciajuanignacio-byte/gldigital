@@ -34,16 +34,9 @@ function readStoredAuth(): { token: string; user: User } | null {
   }
 }
 
-const DEFAULT_USER: User = {
-  id: "local",
-  email: "admin@gldigital.local",
-  name: "Admin",
-  role: "admin"
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const stored = readStoredAuth();
-  const [user, setUser] = useState<User | null>(stored?.user ?? DEFAULT_USER);
+  const [user, setUser] = useState<User | null>(stored?.user ?? null);
   const [token, setToken] = useState<string | null>(stored?.token ?? null);
   const [hydrated, setHydrated] = useState(false);
 
@@ -53,12 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (next?.token) {
         setAuthToken(next.token);
       } else {
-        setUser(DEFAULT_USER);
+        setUser(null);
+        setToken(null);
         setAuthToken(undefined);
       }
       if (!next) localStorage.removeItem(STORAGE_KEY);
     } catch {
-      setUser(DEFAULT_USER);
+      setUser(null);
+      setToken(null);
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch {}
