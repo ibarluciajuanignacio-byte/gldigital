@@ -83,12 +83,13 @@ STORAGE_MODE=local
 ENVFILE
 echo "Archivo .env creado."
 
-# 5) Instalar y build
+# 5) Instalar y build (shared primero, luego api, luego web)
 npm install
 cd apps/api
 npx prisma generate
 npx prisma db push
 cd "$WEB_ROOT"
+npm run build --workspace @gldigital/shared
 npm run build --workspace @gldigital/api
 VITE_API_URL= npm run build --workspace @gldigital/web
 echo "Build listo."
