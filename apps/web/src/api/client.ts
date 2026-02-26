@@ -1,12 +1,14 @@
 import axios from "axios";
 
-/** En dev usa proxy. En producción: si VITE_API_URL es "" usamos misma origen (API sirve el front). */
+/** En dev usa proxy. En producción: misma origen (/api) salvo que VITE_API_URL diga otra cosa. */
 export function getApiBaseUrl(): string {
   if (import.meta.env.DEV) {
     return "/api";
   }
   const url = import.meta.env.VITE_API_URL;
-  return url !== undefined ? url : "http://localhost:4000";
+  // Si no está definido o es vacío, misma origen (Nginx hace proxy /api -> API)
+  if (url === undefined || url === "") return "/api";
+  return url;
 }
 
 export const api = axios.create({
