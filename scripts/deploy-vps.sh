@@ -11,15 +11,28 @@ API_PUBLIC_URL="${API_PUBLIC_URL:-http://187.77.61.37}"
 echo "=== Deploy GLdigital ==="
 
 # 1) Pedir datos si no están en entorno
-if [ -z "$MYSQL_ROOT_PASS" ]; then
-  echo -n "Contraseña de MySQL root (Enter si no tiene): "
-  read -s MYSQL_ROOT_PASS
-  echo
-fi
-if [ -z "$GLDI_DB_PASS" ]; then
-  echo -n "Contraseña para el usuario gldigital (base de datos): "
-  read -s GLDI_DB_PASS
-  echo
+# Si usás una BD ya creada (ej. Hostinger phpMyAdmin), definí USE_EXISTING_DB=1 y los GLDI_DB_*
+USE_EXISTING_DB="${USE_EXISTING_DB:-0}"
+if [ "$USE_EXISTING_DB" = "1" ]; then
+  GLDI_DB_HOST="${GLDI_DB_HOST:-localhost}"
+  GLDI_DB_USER="${GLDI_DB_USER:-u412425830_root}"
+  GLDI_DB_PASS="${GLDI_DB_PASS:-Gldigital@2026}"
+  GLDI_DB_NAME="${GLDI_DB_NAME:-u412425830_gldigital}"
+  echo "Usando base de datos existente: $GLDI_DB_NAME en $GLDI_DB_HOST"
+else
+  if [ -z "$MYSQL_ROOT_PASS" ]; then
+    echo -n "Contraseña de MySQL root (Enter si no tiene): "
+    read -s MYSQL_ROOT_PASS
+    echo
+  fi
+  if [ -z "$GLDI_DB_PASS" ]; then
+    echo -n "Contraseña para el usuario gldigital (base de datos): "
+    read -s GLDI_DB_PASS
+    echo
+  fi
+  GLDI_DB_HOST="localhost"
+  GLDI_DB_USER="gldigital"
+  GLDI_DB_NAME="gldigital"
 fi
 if [ -z "$GLDI_JWT_SECRET" ]; then
   echo -n "JWT_SECRET (frase larga, mínimo 16 caracteres): "
@@ -27,24 +40,26 @@ if [ -z "$GLDI_JWT_SECRET" ]; then
   echo
 fi
 
-# 2) Crear base de datos y usuario
-echo "Creando base de datos..."
-if [ -n "$MYSQL_ROOT_PASS" ]; then
-  mysql -u root -p"$MYSQL_ROOT_PASS" -e "
-    CREATE DATABASE IF NOT EXISTS gldigital CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-    CREATE USER IF NOT EXISTS 'gldigital'@'localhost' IDENTIFIED BY '$GLDI_DB_PASS';
-    GRANT ALL PRIVILEGES ON gldigital.* TO 'gldigital'@'localhost';
-    FLUSH PRIVILEGES;
-  "
-else
-  mysql -u root -e "
-    CREATE DATABASE IF NOT EXISTS gldigital CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-    CREATE USER IF NOT EXISTS 'gldigital'@'localhost' IDENTIFIED BY '$GLDI_DB_PASS';
-    GRANT ALL PRIVILEGES ON gldigital.* TO 'gldigital'@'localhost';
-    FLUSH PRIVILEGES;
-  "
+# 2) Crear base de datos y usuario (solo si no usamos BD existente)
+if [ "$USE_EXISTING_DB" != "1" ]; then
+  echo "Creando base de datos..."
+  if [ -n "$MYSQL_ROOT_PASS" ]; then
+    mysql -u root -p"$MYSQL_ROOT_PASS" -e "
+      CREATE DATABASE IF NOT EXISTS gldigital CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+      CREATE USER IF NOT EXISTS 'gldigital'@'localhost' IDENTIFIED BY '$GLDI_DB_PASS';
+      GRANT ALL PRIVILEGES ON gldigital.* TO 'gldigital'@'localhost';
+      FLUSH PRIVILEGES;
+    "
+  else
+    mysql -u root -e "
+      CREATE DATABASE IF NOT EXISTS gldigital CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+      CREATE USER IF NOT EXISTS 'gldigital'@'localhost' IDENTIFIED BY '$GLDI_DB_PASS';
+      GRANT ALL PRIVILEGES ON gldigital.* TO 'gldigital'@'localhost';
+      FLUSH PRIVILEGES;
+    "
+  fi
+  echo "Base de datos lista."
 fi
-echo "Base de datos lista."
 
 # 3) Clonar o actualizar repo
 if [ ! -d "$WEB_ROOT" ]; then
@@ -56,13 +71,12 @@ else
   git pull || true
 fi
 
-# 4) Crear .env (escapar contraseña para URL)
-# Si la contraseña tiene caracteres raros, usar solo letras y números
-SAFE_DB_PASS=$(printf '%s' "$GLDI_DB_PASS" | sed 's/[[\x26\x27\x3F\x23\x25]]/\\&/g')
+# 4) Crear .env (contraseña en URL: @ -> %40 para que no rompa)
+GLDI_DB_PASS_URL=$(printf '%s' "$GLDI_DB_PASS" | sed 's/@/%40/g; s/#/%23/g; s/\%/\%25/g')
 cat > apps/api/.env << ENVFILE
 PORT=4000
 API_PUBLIC_URL=$API_PUBLIC_URL
-DATABASE_URL="mysql://gldigital:${GLDI_DB_PASS}@localhost:3306/gldigital"
+DATABASE_URL="mysql://${GLDI_DB_USER}:${GLDI_DB_PASS_URL}@${GLDI_DB_HOST}:3306/${GLDI_DB_NAME}"
 JWT_SECRET=$GLDI_JWT_SECRET
 CORS_ORIGIN=$API_PUBLIC_URL
 STORAGE_MODE=local
