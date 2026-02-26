@@ -1,0 +1,26 @@
+{
+  "name": "gldigital",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {"preview": "vite preview",
+    "dev": "concurrently \"npm run dev --workspace @gldigital/api\" \"npm run dev --workspace @gldigital/web\"",
+    "local-ip": "node scripts/get-local-ip.js",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "format": "npm run format --workspaces",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "prisma:generate": "npm run prisma:generate --workspace @gldigital/api",
+    "prisma:push": "npm run prisma:push --workspace @gldigital/api",
+    "prisma:migrate": "npm run prisma:migrate --workspace @gldigital/api",
+    "build:deploy": "node scripts/build-deploy.js",
+    "deploy:static": "node scripts/deploy-static.js"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

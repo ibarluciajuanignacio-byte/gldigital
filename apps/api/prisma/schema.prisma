@@ -1,0 +1,424 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  reseller
+}
+
+// Revendedor con más permisos (asignados por Admin) vs revendedor base (menor capacidad)
+enum ResellerLevel {
+  full    // más rango, permisos configurables
+  base    // menor capacidad
+}
+
+enum PaymentStatus {
+  reported_pending
+  confirmed
+  rejected
+}
+
+enum ConversationType {
+  dm
+  group
+}
+
+enum MessageKind {
+  user
+  system
+}
+
+enum LedgerEntryType {
+  debit
+  credit
+}
+
+model User {
+  id             String           @id @default(uuid())
+  email          String           @unique
+  passwordHash   String
+  name           String
+  role           Role
+  createdAt      DateTime         @default(now())
+  reseller       Reseller?
+  sentMessages   ChatMessage[]    @relation("SentMessages")
+  memberships    ChatMember[]
+  reportedBy     Payment[]        @relation("ReportedBy")
+  reviewedBy     Payment[]        @relation("ReviewedBy")
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+}
+
+model Reseller {
+  id               String               @id @default(uuid())
+  userId           String               @unique
+  segment          String?
+  companyName      String?
+  birthday         DateTime?
+  city             String?
+  address          String?
+  latitude         Float?
+  longitude        Float?
+  resellerLevel    ResellerLevel        @default(full)  // full = más rango, base = menor capacidad
+  createdAt        DateTime             @default(now())
+  user             User                 @relation(fields: [userId], references: [id])
+  devices          Device[]
+  consignments     Consignment[]
+  debtLedger       DebtLedgerEntry[]
+  payments         Payment[]
+  stockRequests    StockRequest[]
+  clients          Client[]
+}
+
+model Technician {
+  id            String         @id @default(uuid())
+  name          String
+  phone         String?
+  email         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  devices       Device[]
+  repairRecords RepairRecord[]
+}
+
+model RepairRecord {
+  id          String      @id @default(uuid())
+  deviceId    String
+  technicianId  String
+  reason      String?     // motivo de reparación
+  notes       String?     @db.Text // anotaciones
+  priceCents  Int?        // precio que nos cobró el técnico
+  sentAt      DateTime    @default(now())
+  returnedAt  DateTime?   // cuando volvió del técnico
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  device      Device      @relation(fields: [deviceId], references: [id])
+  technician  Technician  @relation(fields: [technicianId], references: [id])
+
+  @@index([deviceId])
+  @@index([technicianId])
+}
+
+model Device {
+  id                   String              @id @default(uuid())
+  imei                 String              @unique
+  serialNumber         String?
+  model                String
+  modelDisplay         String?             // nombre para mostrar (ej. "iPhone 14" o "iPhone 14 Plus")
+  color                String?
+  memory               String?
+  warrantyStatus       String?
+  batteryCycles        Int?
+  batteryHealth        Int?
+  batteryStatus        String?
+  condition            String              @default("sealed")  // sealed | used | technical_service
+  state                String              @default("available")  // available | sold | pending_receive | pending_scan | in_technician
+  location             String?
+  resellerId           String?
+  technicianId         String?             // asignado a técnico (reparación)
+  purchaseOrderItemId  String?             // trazabilidad: orden de compra de la que provino
+  sourceType           String?             // purchase | consignment_in | trade_in
+  costCents            Int?                // costo unitario (para promediador)
+  reseller             Reseller?           @relation(fields: [resellerId], references: [id])
+  technician           Technician?         @relation(fields: [technicianId], references: [id])
+  repairRecords       RepairRecord[]
+  consignments        Consignment[]
+  purchaseOrderItem   PurchaseOrderItem?  @relation(fields: [purchaseOrderItemId], references: [id])
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([state])
+  @@index([condition])
+  @@index([purchaseOrderItemId])
+  @@index([technicianId])
+}
+
+model Supplier {
+  id          String          @id @default(uuid())
+  name        String          // razón social
+  cuit        String?
+  phone       String?
+  email       String?
+  address     String?
+  currency    String          @default("USD")
+  notes       String?         // anotaciones del proveedor
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  purchaseOrders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id                String              @id @default(uuid())
+  supplierId        String
+  orderNumber       String?             // ej. OC-20260223-0001
+  currency          String              @default("USD")
+  totalAmountCents  Int?                // monto total de la compra (referencia; opcional al crear)
+  shippingCostCents Int                 @default(0)  // costo de envío; prorrateo entre ítems
+  statusPayment     String              @default("unpaid")  // unpaid | partial | paid
+  statusPhysical    String              @default("pending")  // pending | partial | received
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  supplier          Supplier            @relation(fields: [supplierId], references: [id])
+  items             PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id               String    @id @default(uuid())
+  purchaseOrderId  String
+  modelLabel       String    // ej. "iPhone 14 256 GB Purple"
+  displayModel     String?   // modelo para mostrar (ej. "iPhone 14" o "iPhone 14 Plus")
+  model            String?   // modelo del catálogo (ej. iPhone 14 / 14 Plus)
+  memory           String?   // ej. 256 GB
+  color            String?   // ej. Purple
+  quantityExpected Int       @default(1)
+  quantityReceived Int       @default(0)
+  unitCostCents    Int?      // costo unitario (antes de prorrateo)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  devices          Device[]
+}
+
+model DeviceStatus {
+  id                   String    @id @default(uuid())
+  key                  String    @unique
+  name                 String
+  description          String?
+  sector               String    @default("office")
+  isSellable           Boolean   @default(false)
+  isVisibleForReseller Boolean   @default(false)
+  sortOrder            Int       @default(100)
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
+
+model ProductCategory {
+  id        String         @id @default(uuid())
+  name      String
+  slug      String         @unique
+  sortOrder Int            @default(100)
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  offers    ProductOffer[]
+}
+
+model ProductOffer {
+  id          String          @id @default(uuid())
+  categoryId  String
+  name        String
+  brand       String?
+  description String?
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  category    ProductCategory @relation(fields: [categoryId], references: [id])
+  variants    ProductVariant[]
+}
+
+model ProductVariant {
+  id                    String         @id @default(uuid())
+  offerId               String
+  label                 String
+  memory                String?
+  color                 String?
+  sku                   String?
+  isActive              Boolean        @default(true)
+  isSellableWithoutStock Boolean       @default(true)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  offer                 ProductOffer   @relation(fields: [offerId], references: [id])
+  stockRequests         StockRequest[]
+}
+
+model StockRequest {
+  id            String          @id @default(uuid())
+  resellerId    String
+  variantId     String?
+  title         String
+  note          String?
+  quantity      Int             @default(1)
+  status        String          @default("pending_approval")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  resolvedAt    DateTime?
+  resolvedById  String?
+  reseller      Reseller        @relation(fields: [resellerId], references: [id])
+  variant       ProductVariant? @relation(fields: [variantId], references: [id])
+}
+
+model Client {
+  id          String     @id @default(uuid())
+  resellerId  String?
+  name        String
+  email       String?
+  phone       String?
+  birthday    DateTime?
+  city        String?
+  address     String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  reseller    Reseller?  @relation(fields: [resellerId], references: [id])
+}
+
+model Consignment {
+  id                String                 @id @default(uuid())
+  deviceId          String
+  resellerId        String
+  assignedById      String
+  salePriceCents    Int?                   // precio de venta al revendedor (para deuda = salePrice - amountPaid)
+  status            String                 @default("active")
+  assignedAt        DateTime               @default(now())
+  closedAt          DateTime?
+  device            Device                 @relation(fields: [deviceId], references: [id])
+  reseller          Reseller               @relation(fields: [resellerId], references: [id])
+  movements         ConsignmentMovement[]
+}
+
+model ConsignmentMovement {
+  id               String       @id @default(uuid())
+  consignmentId    String
+  movementType     String
+  note             String?
+  createdById      String
+  createdAt        DateTime     @default(now())
+  consignment      Consignment  @relation(fields: [consignmentId], references: [id])
+}
+
+model DebtLedgerEntry {
+  id               String          @id @default(uuid())
+  resellerId       String
+  entryType        LedgerEntryType
+  amountCents      Int
+  currency         String          @default("USD")
+  reason           String
+  referenceType    String?
+  referenceId      String?
+  createdAt        DateTime        @default(now())
+  reseller         Reseller        @relation(fields: [resellerId], references: [id])
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  resellerId       String
+  amountCents      Int
+  currency         String        @default("USD")
+  note             String?
+  status           PaymentStatus @default(reported_pending)
+  receiptKey       String?
+  reportedById     String
+  reviewedById     String?
+  reviewedAt       DateTime?
+  cashBoxId        String?       // cuando se registra pago, impacta en esta caja
+  createdAt        DateTime      @default(now())
+  reseller         Reseller      @relation(fields: [resellerId], references: [id])
+  reportedBy       User          @relation("ReportedBy", fields: [reportedById], references: [id])
+  reviewedBy       User?         @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  cashBox          CashBox?      @relation(fields: [cashBoxId], references: [id])
+}
+
+model CashBox {
+  id          String         @id @default(uuid())
+  name        String         // ej. "Caja Efectivo USD"
+  currency    String         @default("USD")  // USD | USDT | ARS
+  type        String         @default("general")  // general | petty | crypto
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  movements   CashMovement[]
+  payments    Payment[]
+}
+
+model CashMovement {
+  id               String    @id @default(uuid())
+  cashBoxId        String
+  type             String    // credit | debit
+  amountCents      Int
+  currency         String    @default("USD")
+  description      String
+  referenceType    String?   // sale | payment | transfer | expense
+  referenceId      String?
+  createdAt        DateTime  @default(now())
+  cashBox          CashBox   @relation(fields: [cashBoxId], references: [id])
+}
+
+model ChatConversation {
+  id               String          @id @default(uuid())
+  type             ConversationType
+  name             String?
+  createdById      String
+  createdAt        DateTime        @default(now())
+  members          ChatMember[]
+  messages         ChatMessage[]
+  group            ChatGroup?
+}
+
+model ChatGroup {
+  id               String            @id @default(uuid())
+  conversationId   String            @unique
+  label            String
+  conversation     ChatConversation  @relation(fields: [conversationId], references: [id])
+}
+
+model ChatMember {
+  id                 String            @id @default(uuid())
+  conversationId     String
+  userId             String
+  joinedAt           DateTime          @default(now())
+  lastReadMessageId  String?
+  conversation       ChatConversation  @relation(fields: [conversationId], references: [id])
+  user               User              @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+}
+
+model ChatMessage {
+  id               String            @id @default(uuid())
+  conversationId   String
+  senderId         String?
+  kind             MessageKind       @default(user)
+  body             String
+  createdAt        DateTime          @default(now())
+  conversation     ChatConversation  @relation(fields: [conversationId], references: [id])
+  sender           User?             @relation("SentMessages", fields: [senderId], references: [id])
+  attachments      ChatAttachment[]
+}
+
+model ChatAttachment {
+  id               String        @id @default(uuid())
+  messageId        String
+  objectKey        String
+  mimeType         String
+  sizeBytes        Int
+  createdAt        DateTime      @default(now())
+  message          ChatMessage   @relation(fields: [messageId], references: [id])
+}
+
+model AuditLog {
+  id               String      @id @default(uuid())
+  actorId          String?
+  action           String
+  entityType       String
+  entityId         String
+  meta             Json?
+  createdAt        DateTime    @default(now())
+  actor            User?       @relation(fields: [actorId], references: [id])
+}
+
+model Notification {
+  id               String      @id @default(uuid())
+  userId           String
+  type             String
+  title            String
+  body             String
+  isRead           Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  user             User        @relation(fields: [userId], references: [id])
+}

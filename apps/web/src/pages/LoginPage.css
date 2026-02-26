@@ -1,0 +1,292 @@
+.silva-login-card form {
+  display: grid;
+  gap: 10px;
+}
+
+.silva-login-card--over-iphone .silva-login-title,
+.silva-login-card--over-iphone .silva-login-subtitle {
+  text-align: center;
+}
+
+/* ---- Login con animación del iPhone ---- */
+.silva-login--animated {
+  position: fixed;
+  inset: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fondo oscuro detrás del módulo de login (iPhone + formulario) */
+.silva-login-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation: backdrop-in 0.4s ease-out forwards;
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.silva-login-iphone-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  width: max-content;
+  max-width: min(780px, calc(100vw - 40px));
+  margin: 0 auto;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Glow sutil blanco detrás del teléfono cuando el modal está visible */
+.silva-login-iphone-wrapper--form::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 140%;
+  height: 140%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.12) 45%,
+    transparent 70%
+  );
+  filter: blur(35px);
+  z-index: -1;
+  pointer-events: none;
+  animation: glow-in 0.5s ease-out forwards;
+}
+
+@keyframes glow-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Imagen ip17_logingldigital.png: tamaño limitado para que no se corte */
+.silva-login-iphone {
+  display: block;
+  width: 100%;
+  max-width: 780px;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35));
+  transition: filter 0.4s ease;
+}
+
+/* Entrada: iPhone desde abajo hacia arriba al centro (mobile-safe) */
+.silva-login-iphone-wrapper--intro {
+  animation: iphone-intro 2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes iphone-intro {
+  0% {
+    opacity: 0;
+    transform: translateY(80vh) scale(0.85);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* Form visible: iPhone centrado y atenuado (solo cuando aparece el modal) */
+.silva-login-iphone-wrapper--form {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.silva-login-iphone-wrapper--form .silva-login-iphone {
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35)) brightness(0.55);
+}
+
+/* Salida: baja y desaparece (sin rotar) */
+.silva-login-iphone-wrapper--exit {
+  animation: iphone-exit 1.5s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
+}
+
+@keyframes iphone-exit {
+  0% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(85vh) scale(0.8);
+  }
+}
+
+/* Texto "Bienvenido" y subtítulo arriba del modal, detrás del card, centrado */
+.silva-login-welcome {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 14%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+
+.silva-login-welcome__title {
+  font-family: "Boldonse", sans-serif;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  color: rgba(255, 255, 255, 0.92);
+  text-align: center;
+  white-space: nowrap;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.25);
+}
+
+.silva-login-welcome__subtitle {
+  font-family: "Public Sans", Arial, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+.silva-login-welcome--form {
+  animation: welcome-in 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes welcome-in {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.silva-login-welcome--exit {
+  animation: welcome-out 0.6s ease-in forwards;
+}
+
+@keyframes welcome-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Card del formulario sobre el iPhone */
+.silva-login-card--over-iphone {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  margin-top: 0;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+}
+
+.silva-login-card--form {
+  animation: form-in 0.5s ease-out forwards;
+}
+
+@keyframes form-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.silva-login-card--exit {
+  animation: form-out 0.6s ease-in forwards;
+}
+
+@keyframes form-out {
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Marca "Engineered by Studio Grandes Ligas" debajo del modal */
+.silva-login-brand {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translate(-50%, 5%);
+  z-index: 2;
+  padding: 12px 20px 6px;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  animation: brand-fade-in 1.2s ease-out 0.4s forwards;
+  opacity: 0;
+}
+
+.silva-login-brand__img {
+  width: 100%;
+  height: auto;
+  max-height: 80px;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0.82;
+}
+
+@keyframes brand-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+/* Ajustes móvil: bienvenida, subtítulo y espacio para que no se corte nada */
+@media (max-width: 520px) {
+  .silva-login-welcome {
+    top: 10%;
+  }
+
+  .silva-login-welcome__title {
+    font-size: clamp(1.4rem, 6vw, 2rem);
+  }
+
+  .silva-login-welcome__subtitle {
+    font-size: 0.72rem;
+    white-space: normal;
+    max-width: 85vw;
+    line-height: 1.25;
+  }
+
+  .silva-login-iphone-wrapper {
+    max-width: min(780px, calc(100vw - 24px));
+  }
+
+  .silva-login--animated {
+    padding: 12px;
+  }
+}

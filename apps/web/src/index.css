@@ -1,0 +1,13 @@
+html,
+body {
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}

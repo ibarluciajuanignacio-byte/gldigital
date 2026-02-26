@@ -1,0 +1,8 @@
+node_modules/
+dist/
+deploy-public/
+storage/
+*.log
+
+apps/api/.env
+apps/web/.env

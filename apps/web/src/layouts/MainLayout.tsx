@@ -1,0 +1,835 @@
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../state/auth";
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  Truck,
+  Wallet,
+  Banknote,
+  MessageCircle,
+  LogOut,
+  Menu,
+  X,
+  Plus,
+  Building2,
+  ShoppingCart,
+  Barcode,
+  Settings,
+  Wrench,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { api } from "../api/client";
+import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
+import { isMobile } from "../utils/isMobile";
+import { getStoredAdminName, getStoredAdminAvatar } from "../utils/adminProfileStorage";
+
+const links = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/inventory", label: "Stock", icon: Package },
+  { to: "/suppliers", label: "Proveedores", icon: Building2 },
+  { to: "/purchases", label: "Compras", icon: ShoppingCart },
+  { to: "/resellers", label: "Revendedores", icon: Users },
+  { to: "/resellers/map", label: "Mapa revendedores", icon: Users },
+  { to: "/clients", label: "Clientes", icon: Users },
+  { to: "/consignments", label: "Consignaciones", icon: Truck },
+  { to: "/debts", label: "Deuda viva", icon: Wallet },
+  { to: "/payments", label: "Pagos", icon: Banknote },
+  { to: "/cashboxes", label: "Cajas", icon: Wallet },
+  { to: "/chat", label: "Chat", icon: MessageCircle },
+  { to: "/technicians", label: "Técnicos", icon: Wrench },
+  { to: "/settings", label: "Configuración", icon: Settings },
+];
+
+export function MainLayout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false
+  );
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
+  const [quickModal, setQuickModal] = useState<"payment" | "debt" | "request" | "stock" | null>(null);
+  const [quickError, setQuickError] = useState<string | null>(null);
+
+  const [resellers, setResellers] = useState<Array<{ id: string; user: { name: string } }>>([]);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({ resellerId: "", amount: "", note: "" });
+
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [catalog, setCatalog] = useState<
+    Array<{ id: string; name: string; offers: Array<{ id: string; name: string; variants: Array<{ id: string; label: string }> }> }>
+  >([]);
+  const [requestForm, setRequestForm] = useState({
+    resellerId: "",
+    variantId: "",
+    title: "",
+    quantity: "1",
+    note: ""
+  });
+
+  const [stockSubmitting, setStockSubmitting] = useState(false);
+  const [stockForm, setStockForm] = useState({
+    serialNumber: "",
+    imei: "",
+    model: ""
+  });
+  const [quickImeiScannerOpen, setQuickImeiScannerOpen] = useState(false);
+  const [, setProfileVersion] = useState(0);
+
+  const [debtSummary, setDebtSummary] = useState<{
+    items?: Array<{ resellerId: string; resellerName: string; balanceCents: number }>;
+    balanceCents?: number;
+  } | null>(null);
+  const [selectedDebtResellerId, setSelectedDebtResellerId] = useState("");
+
+  const pageTitles: Record<string, string> = {
+    "/": "Dashboard",
+    "/inventory": "Stock",
+    "/suppliers": "Proveedores",
+    "/purchases": "Compras",
+    "/resellers": "Revendedores",
+    "/resellers/map": "Mapa revendedores",
+    "/clients": "Clientes",
+    "/consignments": "Consignaciones",
+    "/debts": "Deuda viva",
+    "/payments": "Pagos",
+    "/cashboxes": "Cajas",
+    "/chat": "Chat",
+    "/technicians": "Técnicos",
+    "/settings": "Configuración",
+  };
+  const currentTitle =
+    pageTitles[location.pathname] ??
+    (location.pathname.startsWith("/cashboxes/") ? "Caja" : location.pathname.startsWith("/suppliers/") ? "Ficha de proveedor" : "GLdigital");
+
+  function isModule1Path(pathname: string): boolean {
+    if (pathname === "/" || pathname === "/inventory" || pathname === "/suppliers" || pathname.startsWith("/suppliers/") || pathname === "/consignments" || pathname === "/debts") return true;
+    if (pathname.startsWith("/purchases")) return true;
+    if (pathname === "/resellers" || pathname === "/resellers/map" || pathname.startsWith("/resellers/")) return true;
+    if (pathname === "/technicians") return true;
+    return false;
+  }
+  const isLockedPath = !isModule1Path(location.pathname);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setMobileMoreOpen(false);
+    setIsQuickMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handler = () => setProfileVersion((v) => v + 1);
+    window.addEventListener("gldigital-admin-profile-updated", handler);
+    return () => window.removeEventListener("gldigital-admin-profile-updated", handler);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const onChange = (e: MediaQueryListEvent) => setIsMobileView(e.matches);
+    setIsMobileView(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  function isActivePath(pathname: string) {
+    if (pathname === "/") return location.pathname === "/";
+    return location.pathname.startsWith(pathname);
+  }
+
+  async function loadResellersIfNeeded(): Promise<Array<{ id: string; user: { name: string } }>> {
+    if (user?.role !== "admin") return [];
+    if (resellers.length) return resellers;
+    const { data } = await api.get("/resellers");
+    setResellers(data.resellers ?? []);
+    return data.resellers ?? [];
+  }
+
+  async function openQuickModal(type: "payment" | "debt" | "request" | "stock") {
+    setQuickError(null);
+    setIsQuickMenuOpen(false);
+    setQuickModal(type);
+    try {
+      if (type === "payment") {
+        const adminResellers = await loadResellersIfNeeded();
+        if (user?.role === "admin") {
+          setPaymentForm((p) => ({
+            ...p,
+            resellerId: p.resellerId || adminResellers[0]?.id || ""
+          }));
+        } else if (user?.role === "reseller" && user.resellerId) {
+          setPaymentForm((p) => ({ ...p, resellerId: user.resellerId! }));
+        }
+      }
+
+      if (type === "request") {
+        const [catRes, adminResellers] = await Promise.all([
+          api.get("/stock/catalog"),
+          loadResellersIfNeeded()
+        ]);
+        setCatalog(catRes.data.categories ?? []);
+        if (user?.role === "admin") {
+          setRequestForm((p) => ({
+            ...p,
+            resellerId: p.resellerId || adminResellers[0]?.id || ""
+          }));
+        } else if (user?.role === "reseller" && user.resellerId) {
+          setRequestForm((p) => ({ ...p, resellerId: user.resellerId! }));
+        }
+      }
+
+      if (type === "debt") {
+        const { data } = await api.get("/debts/summary");
+        setDebtSummary(data);
+        if (user?.role === "admin") {
+          const firstId = data?.items?.[0]?.resellerId ?? "";
+          setSelectedDebtResellerId(firstId);
+        } else {
+          setSelectedDebtResellerId(user?.resellerId ?? "");
+        }
+      }
+    } catch (err: any) {
+      setQuickError(err?.response?.data?.message ?? "No se pudo abrir la acción rápida.");
+    }
+  }
+
+  function closeQuickModal() {
+    setQuickModal(null);
+    setQuickError(null);
+    setQuickImeiScannerOpen(false);
+  }
+
+  async function submitQuickPayment(e: FormEvent) {
+    e.preventDefault();
+    const amount = Number(paymentForm.amount);
+    if (!paymentForm.resellerId) {
+      setQuickError("Seleccioná revendedor.");
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setQuickError("Ingresá un monto válido.");
+      return;
+    }
+    setPaymentSubmitting(true);
+    setQuickError(null);
+    try {
+      await api.post("/payments/report", {
+        resellerId: paymentForm.resellerId,
+        amount,
+        note: paymentForm.note || undefined
+      });
+      setPaymentForm((p) => ({ ...p, amount: "", note: "" }));
+      closeQuickModal();
+      navigate("/payments");
+    } catch (err: any) {
+      setQuickError(err?.response?.data?.error ?? err?.response?.data?.message ?? "No se pudo reportar el pago.");
+    } finally {
+      setPaymentSubmitting(false);
+    }
+  }
+
+  async function submitQuickRequest(e: FormEvent) {
+    e.preventDefault();
+    const quantity = Number(requestForm.quantity);
+    if (!requestForm.title.trim()) {
+      setQuickError("El título es obligatorio.");
+      return;
+    }
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      setQuickError("La cantidad debe ser mayor a 0.");
+      return;
+    }
+    if (user?.role === "admin" && !requestForm.resellerId) {
+      setQuickError("Seleccioná revendedor.");
+      return;
+    }
+    setRequestSubmitting(true);
+    setQuickError(null);
+    try {
+      await api.post("/stock/requests", {
+        resellerId: requestForm.resellerId || undefined,
+        variantId: requestForm.variantId || undefined,
+        title: requestForm.title.trim(),
+        quantity,
+        note: requestForm.note.trim() || undefined
+      });
+      setRequestForm((p) => ({ ...p, variantId: "", title: "", quantity: "1", note: "" }));
+      closeQuickModal();
+      navigate("/inventory");
+    } catch (err: any) {
+      setQuickError(err?.response?.data?.message ?? "No se pudo crear la solicitud.");
+    } finally {
+      setRequestSubmitting(false);
+    }
+  }
+
+  async function submitQuickStock(e: FormEvent) {
+    e.preventDefault();
+    const serialNumber = stockForm.serialNumber.trim();
+    const imei = stockForm.imei.trim();
+    const model = stockForm.model.trim();
+    if (!serialNumber || !imei || !model) {
+      setQuickError("Serie, IMEI y modelo son obligatorios.");
+      return;
+    }
+    setStockSubmitting(true);
+    setQuickError(null);
+    try {
+      await api.post("/devices", {
+        serialNumber,
+        imei,
+        model,
+        state: "available"
+      });
+      setStockForm({ serialNumber: "", imei: "", model: "" });
+      closeQuickModal();
+      navigate("/inventory");
+    } catch (err: any) {
+      setQuickError(err?.response?.data?.message ?? "No se pudo agregar el equipo.");
+    } finally {
+      setStockSubmitting(false);
+    }
+  }
+
+  const mobilePrimaryLinks = [
+    { to: "/", label: "Inicio", icon: LayoutDashboard },
+    { to: "/inventory", label: "Stock", icon: Package },
+    { to: "/payments", label: "Pagos", icon: Banknote },
+    { to: "/chat", label: "Chat", icon: MessageCircle }
+  ];
+
+  /* Acciones rápidas FAB: Compra, Movimientos, Cajas; apiladas arriba del FAB para no solaparse (ancho botón 118px → centrado con x -59) */
+  const mobileQuickActions = [
+    { key: "purchase" as const, label: "Compra", icon: ShoppingCart, x: -59, y: -165, action: "navigate" as const, to: "/purchases" },
+    { key: "movements" as const, label: "Movimientos", icon: Wallet, x: -59, y: -105, action: "modal" as const, modal: "debt" as const },
+    { key: "cashboxes" as const, label: "Cajas", icon: Building2, x: -59, y: -45, action: "navigate" as const, to: "/cashboxes" }
+  ];
+
+  if (isMobileView) {
+    const currentDebtItem =
+      user?.role === "admin"
+        ? debtSummary?.items?.find((item) => item.resellerId === selectedDebtResellerId)
+        : null;
+
+    return (
+      <div className="silva-mobile-shell">
+        <header className="silva-mobile-topbar">
+          <div>
+            <h1 className="silva-mobile-title">{currentTitle}</h1>
+            <p className="silva-mobile-subtitle">
+              Hola, {user?.name ?? "Usuario"} · {user?.role ?? ""}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="silva-mobile-menu-btn"
+            onClick={() => setMobileMoreOpen((prev) => !prev)}
+            aria-label="Abrir accesos"
+          >
+            <Menu size={18} />
+          </button>
+        </header>
+
+        {mobileMoreOpen && (
+          <div className="silva-mobile-more">
+            {links
+              .filter((l) => !mobilePrimaryLinks.some((p) => p.to === l.to))
+              .map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={`silva-mobile-more__item ${isActivePath(to) ? "is-active" : ""}`}
+                  onClick={() => setMobileMoreOpen(false)}
+                >
+                  <Icon size={16} />
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            <button
+              type="button"
+              className="silva-mobile-more__item"
+              onClick={logout}
+            >
+              <LogOut size={16} />
+              <span>Cerrar sesión</span>
+            </button>
+          </div>
+        )}
+
+        <main className="silva-mobile-content">
+          <div style={{ position: "relative", height: "100%", minHeight: "100%" }}>
+            <Outlet />
+            {isLockedPath && (
+              <div
+                className="silva-module1-lock-overlay"
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 35,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(0, 0, 0, 0.65)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  padding: 24
+                }}
+                aria-hidden="true"
+              >
+                <img
+                  src="/candadobigligas.png"
+                  alt="Sección no disponible en esta entrega"
+                  style={{ maxWidth: "100%", maxHeight: "85vh", objectFit: "contain" }}
+                />
+              </div>
+            )}
+          </div>
+        </main>
+
+        {isQuickMenuOpen && <button className="silva-mobile-fab-overlay" onClick={() => setIsQuickMenuOpen(false)} aria-label="Cerrar menú rápido" />}
+
+        <div className={`silva-mobile-quick-actions ${isQuickMenuOpen ? "is-open" : ""}`}>
+          {mobileQuickActions.map((actionConfig, index) => {
+            const { key, label, icon: Icon, x, y, action } = actionConfig;
+            return (
+              <button
+                key={key}
+                type="button"
+                className="silva-mobile-quick-action"
+                style={{
+                  ["--tx" as any]: `${x}px`,
+                  ["--ty" as any]: `${y}px`,
+                  transitionDelay: isQuickMenuOpen ? `${index * 28}ms` : "0ms"
+                }}
+                onClick={() => {
+                  if (action === "navigate" && "to" in actionConfig) {
+                    navigate(actionConfig.to);
+                    setIsQuickMenuOpen(false);
+                  } else if (action === "modal" && "modal" in actionConfig) {
+                    openQuickModal(actionConfig.modal);
+                  }
+                }}
+              >
+                <Icon size={16} />
+                <span>{label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="silva-mobile-bottombar-wrap" aria-label="Navegación principal móvil">
+          <svg aria-hidden="true" width="0" height="0" style={{ position: "absolute", pointerEvents: "none" }}>
+            <defs>
+              <clipPath id="silva-bottom-bar-wave" clipPathUnits="objectBoundingBox">
+                {/* Ola: puntas más altas (extremos más arriba), valle en el centro */}
+                <path d="M 0 0.02 Q 0.5 0.42 1 0.02 L 1 1 L 0 1 Z" />
+              </clipPath>
+            </defs>
+          </svg>
+          <div className="silva-mobile-bottombar-bar">
+            <nav className="silva-mobile-bottombar">
+              {mobilePrimaryLinks.slice(0, 2).map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} className={`silva-mobile-tab ${isActivePath(to) ? "is-active" : ""}`}>
+                  <span className="silva-mobile-tab__icon">
+                    <Icon size={18} />
+                  </span>
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+              <div className="silva-mobile-bottombar-fab-slot" aria-hidden="true" />
+              {mobilePrimaryLinks.slice(2).map(({ to, label, icon: Icon }) => (
+                <NavLink key={to} to={to} className={`silva-mobile-tab ${isActivePath(to) ? "is-active" : ""}`}>
+                  <span className="silva-mobile-tab__icon">
+                    <Icon size={18} />
+                  </span>
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+          <button
+            type="button"
+            className={`silva-mobile-fab ${isQuickMenuOpen ? "is-open" : ""}`}
+            onClick={() => setIsQuickMenuOpen((prev) => !prev)}
+            aria-label="Acciones rápidas"
+          >
+            <Plus size={22} />
+          </button>
+        </div>
+
+        {quickModal && (
+          <div className="silva-modal-backdrop silva-mobile-sheet-backdrop" role="dialog" aria-modal="true" aria-label="Acción rápida">
+            <div className="silva-modal silva-mobile-sheet">
+              {quickModal === "payment" && (
+                <>
+                  <h3 className="silva-modal-title">Pago rápido</h3>
+                  <p className="silva-modal-subtitle">Reporta pago sin salir de la pantalla actual.</p>
+                  <form onSubmit={submitQuickPayment}>
+                    {user?.role === "admin" && (
+                      <>
+                        <label className="silva-label">Revendedor</label>
+                        <select
+                          className="silva-select"
+                          value={paymentForm.resellerId}
+                          onChange={(e) => setPaymentForm((p) => ({ ...p, resellerId: e.target.value }))}
+                        >
+                          <option value="">Seleccionar</option>
+                          {resellers.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.user.name}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                    <label className="silva-label" style={{ marginTop: 8 }}>Monto (USD)</label>
+                    <input
+                      className="silva-input"
+                      type="number"
+                      step="0.01"
+                      value={paymentForm.amount}
+                      onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))}
+                    />
+                    <label className="silva-label" style={{ marginTop: 8 }}>Nota</label>
+                    <input
+                      className="silva-input"
+                      value={paymentForm.note}
+                      onChange={(e) => setPaymentForm((p) => ({ ...p, note: e.target.value }))}
+                    />
+                    {quickError && <div className="silva-alert" style={{ marginTop: 8 }}>{quickError}</div>}
+                    <div className="silva-modal-actions" style={{ marginTop: 14 }}>
+                      <button type="button" className="silva-btn" onClick={closeQuickModal} disabled={paymentSubmitting}>Cancelar</button>
+                      <button type="submit" className="silva-btn silva-btn-primary" disabled={paymentSubmitting}>
+                        {paymentSubmitting ? "Enviando..." : "Emitir pago"}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )}
+
+              {quickModal === "request" && (
+                <>
+                  <h3 className="silva-modal-title">Solicitud rápida</h3>
+                  <p className="silva-modal-subtitle">Crea una solicitud sin stock para aprobación.</p>
+                  <form onSubmit={submitQuickRequest}>
+                    {user?.role === "admin" && (
+                      <>
+                        <label className="silva-label">Revendedor</label>
+                        <select
+                          className="silva-select"
+                          value={requestForm.resellerId}
+                          onChange={(e) => setRequestForm((p) => ({ ...p, resellerId: e.target.value }))}
+                        >
+                          <option value="">Seleccionar</option>
+                          {resellers.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.user.name}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    )}
+                    <label className="silva-label" style={{ marginTop: 8 }}>Variante (opcional)</label>
+                    <select
+                      className="silva-select"
+                      value={requestForm.variantId}
+                      onChange={(e) => setRequestForm((p) => ({ ...p, variantId: e.target.value }))}
+                    >
+                      <option value="">Seleccionar</option>
+                      {catalog.flatMap((c) =>
+                        c.offers.flatMap((o) =>
+                          o.variants.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {c.name} / {o.name} / {v.label}
+                            </option>
+                          ))
+                        )
+                      )}
+                    </select>
+                    <label className="silva-label" style={{ marginTop: 8 }}>Título</label>
+                    <input
+                      className="silva-input"
+                      value={requestForm.title}
+                      onChange={(e) => setRequestForm((p) => ({ ...p, title: e.target.value }))}
+                    />
+                    <label className="silva-label" style={{ marginTop: 8 }}>Cantidad</label>
+                    <input
+                      className="silva-input"
+                      type="number"
+                      min="1"
+                      value={requestForm.quantity}
+                      onChange={(e) => setRequestForm((p) => ({ ...p, quantity: e.target.value }))}
+                    />
+                    <label className="silva-label" style={{ marginTop: 8 }}>Nota</label>
+                    <input
+                      className="silva-input"
+                      value={requestForm.note}
+                      onChange={(e) => setRequestForm((p) => ({ ...p, note: e.target.value }))}
+                    />
+                    {quickError && <div className="silva-alert" style={{ marginTop: 8 }}>{quickError}</div>}
+                    <div className="silva-modal-actions" style={{ marginTop: 14 }}>
+                      <button type="button" className="silva-btn" onClick={closeQuickModal} disabled={requestSubmitting}>Cancelar</button>
+                      <button type="submit" className="silva-btn silva-btn-primary" disabled={requestSubmitting}>
+                        {requestSubmitting ? "Enviando..." : "Enviar solicitud"}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )}
+
+              {quickModal === "stock" && (
+                <>
+                  <h3 className="silva-modal-title">Stock rápido</h3>
+                  <p className="silva-modal-subtitle">Alta mínima de equipo (serie + IMEI + modelo).</p>
+                  <form onSubmit={submitQuickStock}>
+                    <label className="silva-label">N° de serie</label>
+                    <input
+                      className="silva-input"
+                      value={stockForm.serialNumber}
+                      onChange={(e) => setStockForm((p) => ({ ...p, serialNumber: e.target.value }))}
+                    />
+                    <label className="silva-label" style={{ marginTop: 8 }}>IMEI</label>
+                    <div
+                      className="silva-input-with-icon"
+                      role={isMobile() ? "button" : undefined}
+                      tabIndex={isMobile() ? 0 : undefined}
+                      onClick={() => isMobile() && setQuickImeiScannerOpen(true)}
+                      onKeyDown={(e) => isMobile() && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setQuickImeiScannerOpen(true))}
+                      style={isMobile() ? { cursor: "pointer" } : undefined}
+                    >
+                      <input
+                        className="silva-input"
+                        value={stockForm.imei}
+                        onChange={(e) => setStockForm((p) => ({ ...p, imei: e.target.value }))}
+                        placeholder={isMobile() ? "Tocá para escanear código de barras" : ""}
+                        readOnly={isMobile()}
+                        aria-label="IMEI (en móvil tocá para escanear)"
+                      />
+                      <span className="silva-input-with-icon__suffix" aria-hidden>
+                        <Barcode size={18} />
+                      </span>
+                    </div>
+                    <label className="silva-label" style={{ marginTop: 8 }}>Modelo</label>
+                    <input
+                      className="silva-input"
+                      value={stockForm.model}
+                      onChange={(e) => setStockForm((p) => ({ ...p, model: e.target.value }))}
+                    />
+                    {quickError && <div className="silva-alert" style={{ marginTop: 8 }}>{quickError}</div>}
+                    <div className="silva-modal-actions" style={{ marginTop: 14 }}>
+                      <button type="button" className="silva-btn" onClick={closeQuickModal} disabled={stockSubmitting}>Cancelar</button>
+                      <button type="submit" className="silva-btn silva-btn-primary" disabled={stockSubmitting}>
+                        <Barcode size={16} />
+                        {stockSubmitting ? "Guardando..." : "Agregar stock"}
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="silva-btn"
+                      style={{ marginTop: 10, width: "100%" }}
+                      onClick={() => {
+                        closeQuickModal();
+                        navigate("/inventory");
+                      }}
+                    >
+                      Abrir formulario completo
+                    </button>
+                  </form>
+                </>
+              )}
+
+              {quickModal === "debt" && (
+                <>
+                  <h3 className="silva-modal-title">Movimientos</h3>
+                  <p className="silva-modal-subtitle">Registrá un pago o un movimiento de deuda/gasto del revendedor.</p>
+                  {user?.role === "admin" ? (
+                    <>
+                      <label className="silva-label">Revendedor</label>
+                      <select
+                        className="silva-select"
+                        value={selectedDebtResellerId}
+                        onChange={(e) => setSelectedDebtResellerId(e.target.value)}
+                      >
+                        {(debtSummary?.items ?? []).map((item) => (
+                          <option key={item.resellerId} value={item.resellerId}>
+                            {item.resellerName}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="silva-card" style={{ marginTop: 10, background: "#f8fafb" }}>
+                        Saldo actual:{" "}
+                        <strong>{(((currentDebtItem?.balanceCents ?? 0) / 100) || 0).toFixed(2)} USD</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="silva-card" style={{ marginTop: 10, background: "#f8fafb" }}>
+                      Saldo actual: <strong>{(((debtSummary?.balanceCents ?? 0) / 100) || 0).toFixed(2)} USD</strong>
+                    </div>
+                  )}
+                  {quickError && <div className="silva-alert" style={{ marginTop: 8 }}>{quickError}</div>}
+                  <div className="silva-modal-actions" style={{ marginTop: 14, justifyContent: "space-between", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="silva-btn"
+                      onClick={() => {
+                        closeQuickModal();
+                        navigate("/debts");
+                      }}
+                    >
+                      Ir a Deuda viva
+                    </button>
+                    <button
+                      type="button"
+                      className="silva-btn silva-btn-primary"
+                      onClick={() => {
+                        if (user?.role === "admin" && selectedDebtResellerId) {
+                          setPaymentForm((p) => ({ ...p, resellerId: selectedDebtResellerId }));
+                        }
+                        setQuickModal("payment");
+                      }}
+                    >
+                      Emitir pago
+                    </button>
+                  </div>
+                  <button type="button" className="silva-btn" style={{ marginTop: 10, width: "100%" }} onClick={closeQuickModal}>
+                    Cerrar
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="silva-shell">
+      <div
+        className={`silva-sidebar ${mobileMenuOpen ? "is-open" : ""}`}
+        aria-label="Barra lateral principal"
+      >
+        <div className="silva-sidebar__brand">
+          <img src="/EngineeredBigLigas.png" alt="GLdigital" className="silva-sidebar__brand-logo" />
+          <button
+            type="button"
+            className="silva-mobile-toggle"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Cerrar menú"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="silva-sidebar__user">
+          <img
+            className="silva-avatar"
+            src={
+              (user?.role === "admin" && getStoredAdminAvatar()) ||
+              (user?.role === "admin" ? "/admin-profile.png" : "/dist/images/fakers/profile-13.jpg")
+            }
+            alt=""
+          />
+          <div>
+            <div className="silva-sidebar__name">
+              {((user?.role === "admin" && getStoredAdminName()) || user?.name) ?? "Usuario"}
+            </div>
+            <div className="silva-sidebar__role">{user?.role ?? ""}</div>
+          </div>
+        </div>
+
+        <nav className="silva-nav">
+          <div className="silva-nav__title">Menu</div>
+          {links.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/"}
+              className={`silva-nav__link ${isActivePath(to) ? "is-active" : ""}`}
+            >
+              <Icon size={16} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="silva-sidebar__footer">
+          <button type="button" onClick={logout} className="silva-nav__link" style={{ width: "100%" }}>
+            <LogOut size={16} />
+            <span>Cerrar sesión</span>
+          </button>
+        </div>
+      </div>
+
+      <div
+        className={`silva-overlay ${mobileMenuOpen ? "is-open" : ""}`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+
+      <div className="silva-main">
+        <header className="silva-topbar">
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <button
+              type="button"
+              className="silva-mobile-toggle"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Abrir menú"
+            >
+              <Menu size={18} />
+            </button>
+            <h1 className="silva-topbar__title">{currentTitle}</h1>
+          </div>
+          <div className="silva-topbar__meta">
+            {user?.name ?? "Usuario"} - {user?.role ?? ""}
+          </div>
+        </header>
+        <main className="silva-content">
+          <div style={{ position: "relative", height: "100%", minHeight: "100%" }}>
+            <Outlet />
+            {isLockedPath && (
+              <div
+                className="silva-module1-lock-overlay"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: 35,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "rgba(0, 0, 0, 0.65)",
+                  backdropFilter: "blur(10px)",
+                  WebkitBackdropFilter: "blur(10px)",
+                  padding: 24
+                }}
+                aria-hidden="true"
+              >
+                <img
+                  src="/candadobigligas.png"
+                  alt="Sección no disponible en esta entrega"
+                  style={{ maxWidth: "100%", maxHeight: "85vh", objectFit: "contain" }}
+                />
+              </div>
+            )}
+          </div>
+        </main>
+        <footer className="silva-footer">
+          <span>GLdigital - interfaz Silva adaptada</span>
+        </footer>
+      </div>
+
+      {quickImeiScannerOpen && (
+        <ImeiBarcodeScannerModal
+          open={quickImeiScannerOpen}
+          onClose={() => setQuickImeiScannerOpen(false)}
+          onScan={(digits) => {
+            setStockForm((p) => ({ ...p, imei: digits }));
+            setQuickImeiScannerOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}

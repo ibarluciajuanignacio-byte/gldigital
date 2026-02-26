@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gldigital-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gldigital
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - gldigital_pgdata:/var/lib/postgresql/data
+
+volumes:
+  gldigital_pgdata:
