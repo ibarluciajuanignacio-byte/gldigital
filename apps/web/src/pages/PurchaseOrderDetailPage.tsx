@@ -5,7 +5,8 @@ import { api } from "../api/client";
 import { Box } from "../components/Box";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
 import { isMobile } from "../utils/isMobile";
-import { ArrowLeft, Barcode, CheckCircle, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Pencil, Trash2 } from "lucide-react";
+import { LordIcon } from "../components/LordIcon";
 import { getBaseModels, getVersionOptions, getModelForVersionKey } from "../utils/phoneCatalogGroup";
 
 type PurchaseOrderItem = {
@@ -405,7 +406,7 @@ export function PurchaseOrderDetailPage() {
                   aria-label="IMEI (en móvil tocá para escanear)"
                 />
                 <span className="silva-input-with-icon__suffix" aria-hidden>
-                  <Barcode size={18} />
+                  <LordIcon name="barcode" size={18} />
                 </span>
               </div>
             </div>
@@ -422,7 +423,7 @@ export function PurchaseOrderDetailPage() {
             </div>
             <div className="silva-col-1" style={{ display: "flex", alignItems: "flex-end" }}>
               <button type="submit" className="silva-btn silva-btn-primary" disabled={receiving}>
-                <Barcode size={16} style={{ marginRight: "4px", verticalAlign: "middle" }} />
+                <LordIcon name="barcode" size={16} style={{ marginRight: "4px", verticalAlign: "middle" }} />
                 Recibir
               </button>
             </div>

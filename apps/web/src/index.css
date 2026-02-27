@@ -11,3 +11,13 @@ a {
 #root {
   min-height: 100vh;
 }
+
+/* Fade-in del dashboard al entrar desde el login */
+.silva-layout-fade-in {
+  animation: layout-fade-in 0.6s ease-out forwards;
+}
+
+@keyframes layout-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

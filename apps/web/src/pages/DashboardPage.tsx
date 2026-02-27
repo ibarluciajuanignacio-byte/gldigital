@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 import { api } from "../api/client";
 import { Box } from "../components/Box";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Banknote, ChevronDown, ChevronUp, Package, Truck, Users, Wallet } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { LordIcon, type LordIconName } from "../components/LordIcon";
 
 type DashboardCharts = {
   devicesByState?: Record<string, number>;
@@ -62,6 +66,12 @@ export function DashboardPage() {
   const [liveDollar, setLiveDollar] = useState<LiveDollarOfficial | null>(null);
   const [upcomingBirthdays, setUpcomingBirthdays] = useState<UpcomingBirthday[]>([]);
   const [dollarBarExpanded, setDollarBarExpanded] = useState(false);
+  const [kpiSliderReady, setKpiSliderReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setKpiSliderReady(true), 80);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     api
@@ -104,18 +114,18 @@ export function DashboardPage() {
   }, []);
 
   const isAdmin = "totalDebtCents" in kpis || "consignments" in kpis;
-  const items = isAdmin
+  const items: Array<{ key: string; label: string; lordIcon: LordIconName; to: string }> = isAdmin
     ? [
-        { key: "devices", label: "Equipos", icon: Package, to: "/inventory" },
-        { key: "resellers", label: "Revendedores", icon: Users, to: "/resellers" },
-        { key: "consignments", label: "Consignaciones", icon: Truck, to: "/consignments" },
-        { key: "paymentsPending", label: "Pagos pendientes", icon: Banknote, to: "/payments" },
-        { key: "totalDebtCents", label: "Deuda total (USD)", icon: Wallet, to: "/debts" }
+        { key: "devices", label: "Equipos", lordIcon: "stock", to: "/inventory" },
+        { key: "resellers", label: "Revendedores", lordIcon: "resellers", to: "/resellers" },
+        { key: "consignments", label: "Consignaciones", lordIcon: "coonsignacion", to: "/consignments" },
+        { key: "paymentsPending", label: "Pagos pendientes", lordIcon: "caja", to: "/payments" },
+        { key: "totalDebtCents", label: "Deuda total (USD)", lordIcon: "deuda", to: "/debts" }
       ]
     : [
-        { key: "devices", label: "Equipos", icon: Package, to: "/inventory" },
-        { key: "paymentsPending", label: "Pagos pendientes", icon: Banknote, to: "/payments" },
-        { key: "debtCents", label: "Mi deuda (USD)", icon: Wallet, to: "/debts" }
+        { key: "devices", label: "Equipos", lordIcon: "stock", to: "/inventory" },
+        { key: "paymentsPending", label: "Pagos pendientes", lordIcon: "caja", to: "/payments" },
+        { key: "debtCents", label: "Mi deuda (USD)", lordIcon: "deuda", to: "/debts" }
       ];
 
   const devicesByStateData = useMemo(
@@ -205,45 +215,88 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="silva-home-kpi-row">
-        {items.map(({ key, label, icon: Icon, to }) => (
-          <button
-            key={key}
-            type="button"
-            className="silva-home-kpi-card silva-home-kpi-card--clickable"
-            onClick={() => navigate(to)}
+      <div className="silva-home-kpi-slider-wrap">
+        {kpiSliderReady ? (
+          <Slider
+            className="silva-home-kpi-row"
+            dots={false}
+            arrows={false}
+            infinite
+            autoplay
+            autoplaySpeed={5000}
+            speed={400}
+            slidesToShow={3}
+            slidesToScroll={1}
+            swipeToSlide
+            responsive={[
+              { breakpoint: 480, settings: { slidesToShow: 2, slidesToScroll: 1 } },
+              { breakpoint: 768, settings: { slidesToShow: 3, slidesToScroll: 1 } },
+              { breakpoint: 1024, settings: { slidesToShow: 4, slidesToScroll: 1 } },
+              { breakpoint: 1280, settings: { slidesToShow: 5, slidesToScroll: 1 } },
+            ]}
           >
-            <div className="silva-home-kpi-card__icon">
-              <Icon size={16} />
-            </div>
-            <div className="silva-home-kpi-card__value">
-              {key.includes("Cents") && typeof kpis[key] === "number"
-                ? ((kpis[key] as number) / 100).toFixed(2)
-                : (kpis[key] ?? 0)}
-            </div>
-            <div className="silva-home-kpi-card__label">{label}</div>
-          </button>
-        ))}
+            {items.map(({ key, label, lordIcon, to }) => (
+              <div key={key} className="silva-home-kpi-slide">
+                <button
+                  type="button"
+                  className="silva-home-kpi-card silva-home-kpi-card--clickable"
+                  onClick={() => navigate(to)}
+                >
+                  <div className="silva-home-kpi-card__icon">
+                    <LordIcon name={lordIcon} size={16} />
+                  </div>
+                  <div className="silva-home-kpi-card__value">
+                    {key.includes("Cents") && typeof kpis[key] === "number"
+                      ? ((kpis[key] as number) / 100).toFixed(2)
+                      : (kpis[key] ?? 0)}
+                  </div>
+                  <div className="silva-home-kpi-card__label">{label}</div>
+                </button>
+              </div>
+            ))}
+          </Slider>
+        ) : (
+          <div className="silva-home-kpi-row silva-home-kpi-row--fallback">
+            {items.map(({ key, label, lordIcon, to }) => (
+              <button
+                key={key}
+                type="button"
+                className="silva-home-kpi-card silva-home-kpi-card--clickable"
+                onClick={() => navigate(to)}
+              >
+                <div className="silva-home-kpi-card__icon">
+                  <LordIcon name={lordIcon} size={16} />
+                </div>
+                <div className="silva-home-kpi-card__value">
+                  {key.includes("Cents") && typeof kpis[key] === "number"
+                    ? ((kpis[key] as number) / 100).toFixed(2)
+                    : (kpis[key] ?? 0)}
+                </div>
+                <div className="silva-home-kpi-card__label">{label}</div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="silva-home-quick-row">
         <button type="button" className="silva-home-quick-btn" onClick={() => navigate("/inventory")}>
-          <Package size={16} />
+          <LordIcon name="stock" size={16} />
           <span>Stock</span>
           <ArrowRight size={14} />
         </button>
         <button type="button" className="silva-home-quick-btn" onClick={() => navigate("/payments")}>
-          <Banknote size={16} />
+          <LordIcon name="caja" size={16} />
           <span>Pagos</span>
           <ArrowRight size={14} />
         </button>
         <button type="button" className="silva-home-quick-btn" onClick={() => navigate("/debts")}>
-          <Wallet size={16} />
+          <LordIcon name="deuda" size={16} />
           <span>Deuda</span>
           <ArrowRight size={14} />
         </button>
         <button type="button" className="silva-home-quick-btn" onClick={() => navigate("/consignments")}>
-          <Truck size={16} />
+          <LordIcon name="coonsignacion" size={16} />
           <span>Consignaciones</span>
           <ArrowRight size={14} />
         </button>

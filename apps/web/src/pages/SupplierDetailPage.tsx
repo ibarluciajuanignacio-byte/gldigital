@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { Box } from "../components/Box";
-import { Building2 } from "lucide-react";
+import { LordIcon } from "../components/LordIcon";
 
 type PurchaseOrder = {
   id: string;
@@ -151,7 +151,7 @@ export function SupplierDetailPage() {
         <div className="silva-kpi-card">
           <div className="silva-kpi-label">Proveedor</div>
           <div className="silva-kpi-value" style={{ fontSize: "1.1rem", display: "flex", alignItems: "center", gap: 8 }}>
-            <Building2 size={20} style={{ color: "var(--silva-primary)" }} />
+            <LordIcon name="proveedores" size={20} primary="var(--silva-primary)" />
             {supplier.name}
           </div>
           <div className="silva-helper">{supplier.purchaseOrders.length} órdenes de compra</div>

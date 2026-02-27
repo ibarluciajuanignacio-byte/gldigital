@@ -24,6 +24,16 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Al salir: el fondo y todo el login se desvanecen antes de ir al dashboard */
+.silva-login--fade-out {
+  animation: login-container-fade-out 0.6s ease-out 1s forwards;
+}
+
+@keyframes login-container-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 /* Fondo oscuro detrás del módulo de login (iPhone + formulario) */
 .silva-login-backdrop {
   position: fixed;
@@ -42,14 +52,18 @@
 .silva-login-iphone-wrapper {
   position: absolute;
   top: 50%;
-  left: 0;
-  right: 0;
-  width: max-content;
-  max-width: min(780px, calc(100vw - 40px));
-  margin: 0 auto;
-  transform: translateY(-50%);
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(506px, 94vw);
+  height: 81vh;
+  max-height: 818px;
+  margin: 0;
   z-index: 1;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 /* Glow sutil blanco detrás del teléfono cuando el modal está visible */
@@ -78,12 +92,13 @@
   to { opacity: 1; }
 }
 
-/* Imagen ip17_logingldigital.png: tamaño limitado para que no se corte */
+/* Imagen ip17_logingldigital.png: forzada a caber en el wrapper para que se vea entera y el fondo azul arriba/abajo */
 .silva-login-iphone {
   display: block;
   width: 100%;
-  max-width: 780px;
-  height: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
   object-position: center;
   filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.35));
@@ -98,21 +113,21 @@
 @keyframes iphone-intro {
   0% {
     opacity: 0;
-    transform: translateY(80vh) scale(0.85);
+    transform: translate(-50%, 80vh) scale(0.85);
   }
   15% {
     opacity: 1;
   }
   100% {
     opacity: 1;
-    transform: translateY(-50%) scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
 /* Form visible: iPhone centrado y atenuado (solo cuando aparece el modal) */
 .silva-login-iphone-wrapper--form {
   opacity: 1;
-  transform: translateY(-50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .silva-login-iphone-wrapper--form .silva-login-iphone {
@@ -127,11 +142,11 @@
 @keyframes iphone-exit {
   0% {
     opacity: 1;
-    transform: translateY(-50%) scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translateY(85vh) scale(0.8);
+    transform: translate(-50%, 85vh) scale(0.8);
   }
 }
 
@@ -283,7 +298,9 @@
   }
 
   .silva-login-iphone-wrapper {
-    max-width: min(780px, calc(100vw - 24px));
+    width: min(440px, 94vw);
+    height: 74vh;
+    max-height: 660px;
   }
 
   .silva-login--animated {

@@ -1,46 +1,43 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/auth";
-import {
-  LayoutDashboard,
-  Package,
-  Users,
-  Truck,
-  Wallet,
-  Banknote,
-  MessageCircle,
-  LogOut,
-  Menu,
-  X,
-  Plus,
-  Building2,
-  ShoppingCart,
-  Barcode,
-  Settings,
-  Wrench,
-} from "lucide-react";
+import { LogOut, Menu, X, Plus, Barcode, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "../api/client";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
+import { LordIcon, type LordIconName } from "../components/LordIcon";
 import { isMobile } from "../utils/isMobile";
 import { getStoredAdminName, getStoredAdminAvatar } from "../utils/adminProfileStorage";
 
-const links = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/inventory", label: "Stock", icon: Package },
-  { to: "/suppliers", label: "Proveedores", icon: Building2 },
-  { to: "/purchases", label: "Compras", icon: ShoppingCart },
-  { to: "/resellers", label: "Revendedores", icon: Users },
-  { to: "/resellers/map", label: "Mapa revendedores", icon: Users },
-  { to: "/clients", label: "Clientes", icon: Users },
-  { to: "/consignments", label: "Consignaciones", icon: Truck },
-  { to: "/debts", label: "Deuda viva", icon: Wallet },
-  { to: "/payments", label: "Pagos", icon: Banknote },
-  { to: "/cashboxes", label: "Cajas", icon: Wallet },
-  { to: "/chat", label: "Chat", icon: MessageCircle },
-  { to: "/technicians", label: "Técnicos", icon: Wrench },
+type NavLinkItem = {
+  to: string;
+  label: string;
+  lordIcon?: LordIconName;
+  icon?: React.ComponentType<{ size?: number }>;
+};
+
+const links: NavLinkItem[] = [
+  { to: "/", label: "Dashboard", lordIcon: "dashboard" },
+  { to: "/inventory", label: "Stock", lordIcon: "stock" },
+  { to: "/suppliers", label: "Proveedores", lordIcon: "proveedores" },
+  { to: "/purchases", label: "Compras", lordIcon: "orden_compra" },
+  { to: "/resellers", label: "Revendedores", lordIcon: "resellers" },
+  { to: "/resellers/map", label: "Mapa revendedores", lordIcon: "map" },
+  { to: "/clients", label: "Clientes", lordIcon: "clientes" },
+  { to: "/consignments", label: "Consignaciones", lordIcon: "coonsignacion" },
+  { to: "/debts", label: "Deuda viva", lordIcon: "deuda" },
+  { to: "/payments", label: "Pagos", lordIcon: "caja" },
+  { to: "/cashboxes", label: "Cajas", lordIcon: "caja" },
+  { to: "/chat", label: "Chat", lordIcon: "chat" },
+  { to: "/technicians", label: "Técnicos", lordIcon: "tecnicios" },
   { to: "/settings", label: "Configuración", icon: Settings },
 ];
+
+function NavIcon({ item, size = 16 }: { item: NavLinkItem; size?: number }) {
+  if (item.lordIcon) return <LordIcon name={item.lordIcon} size={size} />;
+  if (item.icon) return <item.icon size={size} />;
+  return null;
+}
 
 export function MainLayout() {
   const { user, logout } = useAuth();
@@ -294,18 +291,27 @@ export function MainLayout() {
     }
   }
 
-  const mobilePrimaryLinks = [
-    { to: "/", label: "Inicio", icon: LayoutDashboard },
-    { to: "/inventory", label: "Stock", icon: Package },
-    { to: "/payments", label: "Pagos", icon: Banknote },
-    { to: "/chat", label: "Chat", icon: MessageCircle }
+  const mobilePrimaryLinks: NavLinkItem[] = [
+    { to: "/", label: "Inicio", lordIcon: "dashboard" },
+    { to: "/inventory", label: "Stock", lordIcon: "stock" },
+    { to: "/payments", label: "Pagos", lordIcon: "caja" },
+    { to: "/chat", label: "Chat", lordIcon: "chat" }
   ];
 
   /* Acciones rápidas FAB: Compra, Movimientos, Cajas; apiladas arriba del FAB para no solaparse (ancho botón 118px → centrado con x -59) */
-  const mobileQuickActions = [
-    { key: "purchase" as const, label: "Compra", icon: ShoppingCart, x: -59, y: -165, action: "navigate" as const, to: "/purchases" },
-    { key: "movements" as const, label: "Movimientos", icon: Wallet, x: -59, y: -105, action: "modal" as const, modal: "debt" as const },
-    { key: "cashboxes" as const, label: "Cajas", icon: Building2, x: -59, y: -45, action: "navigate" as const, to: "/cashboxes" }
+  const mobileQuickActions: Array<{
+    key: string;
+    label: string;
+    lordIcon: LordIconName;
+    x: number;
+    y: number;
+    action: "navigate" | "modal";
+    to?: string;
+    modal?: "debt";
+  }> = [
+    { key: "purchase", label: "Compra", lordIcon: "orden_compra", x: -59, y: -165, action: "navigate", to: "/purchases" },
+    { key: "movements", label: "Movimientos", lordIcon: "deuda", x: -59, y: -105, action: "modal", modal: "debt" },
+    { key: "cashboxes", label: "Cajas", lordIcon: "caja", x: -59, y: -45, action: "navigate", to: "/cashboxes" }
   ];
 
   if (isMobileView) {
@@ -315,7 +321,7 @@ export function MainLayout() {
         : null;
 
     return (
-      <div className="silva-mobile-shell">
+      <div className="silva-mobile-shell silva-layout-fade-in">
         <header className="silva-mobile-topbar">
           <div>
             <h1 className="silva-mobile-title">{currentTitle}</h1>
@@ -337,15 +343,15 @@ export function MainLayout() {
           <div className="silva-mobile-more">
             {links
               .filter((l) => !mobilePrimaryLinks.some((p) => p.to === l.to))
-              .map(({ to, label, icon: Icon }) => (
+              .map((link) => (
                 <NavLink
-                  key={to}
-                  to={to}
-                  className={`silva-mobile-more__item ${isActivePath(to) ? "is-active" : ""}`}
+                  key={link.to}
+                  to={link.to}
+                  className={`silva-mobile-more__item ${isActivePath(link.to) ? "is-active" : ""}`}
                   onClick={() => setMobileMoreOpen(false)}
                 >
-                  <Icon size={16} />
-                  <span>{label}</span>
+                  <NavIcon item={link} size={16} />
+                  <span>{link.label}</span>
                 </NavLink>
               ))}
             <button
@@ -393,7 +399,7 @@ export function MainLayout() {
 
         <div className={`silva-mobile-quick-actions ${isQuickMenuOpen ? "is-open" : ""}`}>
           {mobileQuickActions.map((actionConfig, index) => {
-            const { key, label, icon: Icon, x, y, action } = actionConfig;
+            const { key, label, lordIcon, x, y, action } = actionConfig;
             return (
               <button
                 key={key}
@@ -405,15 +411,15 @@ export function MainLayout() {
                   transitionDelay: isQuickMenuOpen ? `${index * 28}ms` : "0ms"
                 }}
                 onClick={() => {
-                  if (action === "navigate" && "to" in actionConfig) {
+                  if (action === "navigate" && actionConfig.to) {
                     navigate(actionConfig.to);
                     setIsQuickMenuOpen(false);
-                  } else if (action === "modal" && "modal" in actionConfig) {
+                  } else if (action === "modal" && actionConfig.modal) {
                     openQuickModal(actionConfig.modal);
                   }
                 }}
               >
-                <Icon size={16} />
+                <LordIcon name={lordIcon} size={16} />
                 <span>{label}</span>
               </button>
             );
@@ -431,21 +437,21 @@ export function MainLayout() {
           </svg>
           <div className="silva-mobile-bottombar-bar">
             <nav className="silva-mobile-bottombar">
-              {mobilePrimaryLinks.slice(0, 2).map(({ to, label, icon: Icon }) => (
-                <NavLink key={to} to={to} className={`silva-mobile-tab ${isActivePath(to) ? "is-active" : ""}`}>
+              {mobilePrimaryLinks.slice(0, 2).map((link) => (
+                <NavLink key={link.to} to={link.to} className={`silva-mobile-tab ${isActivePath(link.to) ? "is-active" : ""}`}>
                   <span className="silva-mobile-tab__icon">
-                    <Icon size={18} />
+                    <NavIcon item={link} size={24} />
                   </span>
-                  <span>{label}</span>
+                  <span>{link.label}</span>
                 </NavLink>
               ))}
               <div className="silva-mobile-bottombar-fab-slot" aria-hidden="true" />
-              {mobilePrimaryLinks.slice(2).map(({ to, label, icon: Icon }) => (
-                <NavLink key={to} to={to} className={`silva-mobile-tab ${isActivePath(to) ? "is-active" : ""}`}>
+              {mobilePrimaryLinks.slice(2).map((link) => (
+                <NavLink key={link.to} to={link.to} className={`silva-mobile-tab ${isActivePath(link.to) ? "is-active" : ""}`}>
                   <span className="silva-mobile-tab__icon">
-                    <Icon size={18} />
+                    <NavIcon item={link} size={24} />
                   </span>
-                  <span>{label}</span>
+                  <span>{link.label}</span>
                 </NavLink>
               ))}
             </nav>
@@ -707,7 +713,7 @@ export function MainLayout() {
   }
 
   return (
-    <div className="silva-shell">
+    <div className="silva-shell silva-layout-fade-in">
       <div
         className={`silva-sidebar ${mobileMenuOpen ? "is-open" : ""}`}
         aria-label="Barra lateral principal"
@@ -743,15 +749,15 @@ export function MainLayout() {
 
         <nav className="silva-nav">
           <div className="silva-nav__title">Menu</div>
-          {links.map(({ to, label, icon: Icon }) => (
+          {links.map((link) => (
             <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              className={`silva-nav__link ${isActivePath(to) ? "is-active" : ""}`}
+              key={link.to}
+              to={link.to}
+              end={link.to === "/"}
+              className={`silva-nav__link ${isActivePath(link.to) ? "is-active" : ""}`}
             >
-              <Icon size={16} />
-              <span>{label}</span>
+              <NavIcon item={link} size={16} />
+              <span>{link.label}</span>
             </NavLink>
           ))}
         </nav>

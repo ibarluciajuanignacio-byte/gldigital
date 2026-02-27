@@ -54,7 +54,7 @@ export function LoginPage() {
   const showIphone = phase !== "done";
 
   return (
-    <div className="silva-login silva-login--animated">
+    <div className={`silva-login silva-login--animated ${phase === "exit" ? "silva-login--fade-out" : ""}`}>
       {showForm && (
         <div
           className="silva-login-backdrop"

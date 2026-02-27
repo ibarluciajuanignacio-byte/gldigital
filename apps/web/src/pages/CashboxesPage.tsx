@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { Box } from "../components/Box";
-import { Wallet } from "lucide-react";
+import { LordIcon } from "../components/LordIcon";
 
 type CashBox = {
   id: string;
@@ -121,7 +121,7 @@ export function CashboxesPage() {
           <Link key={box.id} to={`/cashboxes/${box.id}`} className="block">
             <Box className="hover:border-silva-primary/50 transition-colors cursor-pointer h-full">
               <div className="flex items-center gap-2 mb-2">
-                <Wallet className="h-5 w-5 text-silva-muted" />
+                <LordIcon name="caja" size={20} className="text-silva-muted" />
                 <span className="font-medium">{box.name}</span>
                 <span className="silva-badge silva-badge-secondary text-xs">
                   {box.currency}

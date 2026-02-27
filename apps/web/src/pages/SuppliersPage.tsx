@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { Box } from "../components/Box";
-import { Building2 } from "lucide-react";
+import { LordIcon } from "../components/LordIcon";
 
 type Supplier = {
   id: string;
@@ -209,7 +209,7 @@ export function SuppliersPage() {
                 >
                   <td>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
-                      <Building2 size={16} style={{ color: "var(--silva-primary)" }} />
+                      <LordIcon name="proveedores" size={16} primary="var(--silva-primary)" />
                       <strong>{s.name}</strong>
                     </span>
                   </td>

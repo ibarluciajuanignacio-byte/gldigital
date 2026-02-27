@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../state/auth";
 import { Box } from "../components/Box";
-import { Barcode, CheckSquare, Package, Smartphone, BarChart2, ChevronRight, ChevronLeft } from "lucide-react";
+import { CheckSquare, Package, Smartphone, BarChart2, ChevronRight, ChevronLeft } from "lucide-react";
+import { LordIcon } from "../components/LordIcon";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
 import { isMobile } from "../utils/isMobile";
 import { getBaseModels, getVersionOptions, getModelForVersionKey } from "../utils/phoneCatalogGroup";
@@ -507,7 +508,7 @@ export function InventoryPage() {
                     aria-label="IMEI (en móvil tocá para escanear)"
                   />
                   <span className="silva-input-with-icon__suffix" aria-hidden>
-                    <Barcode size={18} />
+                    <LordIcon name="barcode" size={18} />
                   </span>
                 </div>
               </div>
@@ -625,7 +626,7 @@ export function InventoryPage() {
               </div>
               <div className="silva-col-4" style={{ display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 2 }}>
                 <button type="submit" className="silva-btn silva-btn-primary" disabled={tradeInLoading}>
-                  <Barcode size={16} />
+                  <LordIcon name="barcode" size={16} />
                   {tradeInLoading ? "Guardando…" : "Dar de alta"}
                 </button>
               </div>
