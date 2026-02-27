@@ -69,13 +69,26 @@ export function DashboardPage() {
     const el = kpiScrollRef.current;
     if (!el) return;
     const interval = setInterval(() => {
-      const step = el.clientWidth * 0.85;
+      const step = el.clientWidth;
       el.scrollBy({ left: step, behavior: "smooth" });
-      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 2) {
-        el.scrollTo({ left: 0, behavior: "smooth" });
-      }
     }, 5000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const el = kpiScrollRef.current;
+    if (!el) return;
+    const checkLoop = () => {
+      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 5) {
+        el.scrollTo({ left: 0, behavior: "auto" });
+      }
+    };
+    el.addEventListener("scroll", checkLoop, { passive: true });
+    const interval = setInterval(checkLoop, 300);
+    return () => {
+      el.removeEventListener("scroll", checkLoop);
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -132,6 +145,8 @@ export function DashboardPage() {
         { key: "paymentsPending", label: "Pagos pendientes", lordIcon: "caja", to: "/payments" },
         { key: "debtCents", label: "Mi deuda (USD)", lordIcon: "deuda", to: "/debts" }
       ];
+  /* Duplicado para slider infinito: al llegar al final se resetea a 0 */
+  const itemsForCarousel = [...items, ...items];
 
   const devicesByStateData = useMemo(
     () =>
@@ -227,8 +242,8 @@ export function DashboardPage() {
           role="region"
           aria-label="KPIs"
         >
-          {items.map(({ key, label, lordIcon, to }) => (
-            <div key={key} className="silva-home-kpi-slide">
+          {itemsForCarousel.map(({ key, label, lordIcon, to }, i) => (
+            <div key={`${key}-${i}`} className="silva-home-kpi-slide">
               <button
                 type="button"
                 className="silva-home-kpi-card silva-home-kpi-card--clickable"

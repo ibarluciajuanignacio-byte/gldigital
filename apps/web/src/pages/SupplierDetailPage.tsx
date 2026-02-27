@@ -143,8 +143,8 @@ export function SupplierDetailPage() {
   return (
     <div>
       <div className="silva-page-header">
-        <h2 className="silva-page-title" style={{ color: "white" }}>Ficha de proveedor</h2>
-        <p className="silva-page-subtitle" style={{ color: "white" }}>Datos de contacto, anotaciones y órdenes de compra.</p>
+        <h2 className="silva-page-title">Ficha de proveedor</h2>
+        <p className="silva-page-subtitle">Datos de contacto, anotaciones y órdenes de compra.</p>
       </div>
 
       <div className="silva-kpi-grid" style={{ marginBottom: "14px" }}>
@@ -158,23 +158,21 @@ export function SupplierDetailPage() {
         </div>
       </div>
 
-      <Box className="mb-6">
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12, justifyContent: "center" }}>
-          <Link to="/suppliers" className="silva-btn">
-            Volver a proveedores
-          </Link>
-          <button
-            type="button"
-            className="silva-btn"
-            style={{ color: "var(--silva-danger, #c00)", borderColor: "var(--silva-danger, #c00)" }}
-            onClick={onDelete}
-            disabled={deleteConfirming || supplier.purchaseOrders.length > 0}
-            title={supplier.purchaseOrders.length > 0 ? "No se puede eliminar: tiene órdenes" : "Eliminar proveedor"}
-          >
-            {deleteConfirming ? "Eliminando..." : "Eliminar proveedor"}
-          </button>
-        </div>
-      </Box>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12, justifyContent: "center" }}>
+        <Link to="/suppliers" className="silva-btn" style={{ backgroundColor: "white" }}>
+          Volver a proveedores
+        </Link>
+        <button
+          type="button"
+          className="silva-btn"
+          style={{ color: "var(--silva-danger, #c00)", borderColor: "var(--silva-danger, #c00)", backgroundColor: "white" }}
+          onClick={onDelete}
+          disabled={deleteConfirming || supplier.purchaseOrders.length > 0}
+          title={supplier.purchaseOrders.length > 0 ? "No se puede eliminar: tiene órdenes" : "Eliminar proveedor"}
+        >
+          {deleteConfirming ? "Eliminando..." : "Eliminar proveedor"}
+        </button>
+      </div>
 
       <Box className="mb-6">
         <h3 className="silva-page-title" style={{ fontSize: "0.95rem", marginBottom: 12 }}>Datos del proveedor</h3>

@@ -8,6 +8,7 @@ export const LORDICON_NAMES = [
   "barcode",
   "caja",
   "chat",
+  "check",
   "clientes",
   "coonsignacion",
   "dashboard",

@@ -223,6 +223,12 @@ body {
   margin-bottom: 16px;
 }
 
+/* Títulos y subtítulos en blanco sobre el fondo azul del header */
+.silva-page-header .silva-page-title,
+.silva-page-header .silva-page-subtitle {
+  color: white;
+}
+
 .silva-page-title {
   margin: 0;
   font-family: var(--silva-font-title);
@@ -1263,11 +1269,11 @@ select.silva-input,
   display: none;
 }
 
+/* 3 cards por vista, ajustadas al ancho de pantalla (2 gaps de 8px entre 3 cards) */
 .silva-home-kpi-row--scroll .silva-home-kpi-slide {
-  flex: 0 0 auto;
-  min-width: 120px;
-  max-width: 160px;
-  scroll-snap-align: center;
+  flex: 0 0 calc((100% - 16px) / 3);
+  min-width: 0;
+  scroll-snap-align: start;
   scroll-snap-stop: normal;
   padding: 0 2px;
   height: 100%;
