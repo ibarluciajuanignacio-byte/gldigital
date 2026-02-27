@@ -350,7 +350,7 @@ export function MainLayout() {
                   className={`silva-mobile-more__item ${isActivePath(link.to) ? "is-active" : ""}`}
                   onClick={() => setMobileMoreOpen(false)}
                 >
-                  <NavIcon item={link} size={16} />
+                  <NavIcon item={link} size={22} />
                   <span>{link.label}</span>
                 </NavLink>
               ))}
@@ -359,7 +359,7 @@ export function MainLayout() {
               className="silva-mobile-more__item"
               onClick={logout}
             >
-              <LogOut size={16} />
+              <LogOut size={22} />
               <span>Cerrar sesión</span>
             </button>
           </div>
@@ -440,7 +440,7 @@ export function MainLayout() {
               {mobilePrimaryLinks.slice(0, 2).map((link) => (
                 <NavLink key={link.to} to={link.to} className={`silva-mobile-tab ${isActivePath(link.to) ? "is-active" : ""}`}>
                   <span className="silva-mobile-tab__icon">
-                    <NavIcon item={link} size={24} />
+                    <NavIcon item={link} size={28} />
                   </span>
                   <span>{link.label}</span>
                 </NavLink>
@@ -449,7 +449,7 @@ export function MainLayout() {
               {mobilePrimaryLinks.slice(2).map((link) => (
                 <NavLink key={link.to} to={link.to} className={`silva-mobile-tab ${isActivePath(link.to) ? "is-active" : ""}`}>
                   <span className="silva-mobile-tab__icon">
-                    <NavIcon item={link} size={24} />
+                    <NavIcon item={link} size={28} />
                   </span>
                   <span>{link.label}</span>
                 </NavLink>

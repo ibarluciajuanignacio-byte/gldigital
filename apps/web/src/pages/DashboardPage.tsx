@@ -1,7 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { Box } from "../components/Box";
 import { useNavigate } from "react-router-dom";
@@ -66,11 +63,19 @@ export function DashboardPage() {
   const [liveDollar, setLiveDollar] = useState<LiveDollarOfficial | null>(null);
   const [upcomingBirthdays, setUpcomingBirthdays] = useState<UpcomingBirthday[]>([]);
   const [dollarBarExpanded, setDollarBarExpanded] = useState(false);
-  const [kpiSliderReady, setKpiSliderReady] = useState(false);
+  const kpiScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setKpiSliderReady(true), 80);
-    return () => clearTimeout(t);
+    const el = kpiScrollRef.current;
+    if (!el) return;
+    const interval = setInterval(() => {
+      const step = el.clientWidth * 0.85;
+      el.scrollBy({ left: step, behavior: "smooth" });
+      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 2) {
+        el.scrollTo({ left: 0, behavior: "smooth" });
+      }
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -216,56 +221,21 @@ export function DashboardPage() {
       </div>
 
       <div className="silva-home-kpi-slider-wrap">
-        {kpiSliderReady ? (
-          <Slider
-            className="silva-home-kpi-row"
-            dots={false}
-            arrows={false}
-            infinite
-            autoplay
-            autoplaySpeed={5000}
-            speed={400}
-            slidesToShow={3}
-            slidesToScroll={1}
-            swipeToSlide
-            responsive={[
-              { breakpoint: 480, settings: { slidesToShow: 2, slidesToScroll: 1 } },
-              { breakpoint: 768, settings: { slidesToShow: 3, slidesToScroll: 1 } },
-              { breakpoint: 1024, settings: { slidesToShow: 4, slidesToScroll: 1 } },
-              { breakpoint: 1280, settings: { slidesToShow: 5, slidesToScroll: 1 } },
-            ]}
-          >
-            {items.map(({ key, label, lordIcon, to }) => (
-              <div key={key} className="silva-home-kpi-slide">
-                <button
-                  type="button"
-                  className="silva-home-kpi-card silva-home-kpi-card--clickable"
-                  onClick={() => navigate(to)}
-                >
-                  <div className="silva-home-kpi-card__icon">
-                    <LordIcon name={lordIcon} size={16} />
-                  </div>
-                  <div className="silva-home-kpi-card__value">
-                    {key.includes("Cents") && typeof kpis[key] === "number"
-                      ? ((kpis[key] as number) / 100).toFixed(2)
-                      : (kpis[key] ?? 0)}
-                  </div>
-                  <div className="silva-home-kpi-card__label">{label}</div>
-                </button>
-              </div>
-            ))}
-          </Slider>
-        ) : (
-          <div className="silva-home-kpi-row silva-home-kpi-row--fallback">
-            {items.map(({ key, label, lordIcon, to }) => (
+        <div
+          ref={kpiScrollRef}
+          className="silva-home-kpi-row silva-home-kpi-row--scroll"
+          role="region"
+          aria-label="KPIs"
+        >
+          {items.map(({ key, label, lordIcon, to }) => (
+            <div key={key} className="silva-home-kpi-slide">
               <button
-                key={key}
                 type="button"
                 className="silva-home-kpi-card silva-home-kpi-card--clickable"
                 onClick={() => navigate(to)}
               >
                 <div className="silva-home-kpi-card__icon">
-                  <LordIcon name={lordIcon} size={16} />
+                  <LordIcon name={lordIcon} size={24} />
                 </div>
                 <div className="silva-home-kpi-card__value">
                   {key.includes("Cents") && typeof kpis[key] === "number"
@@ -274,9 +244,9 @@ export function DashboardPage() {
                 </div>
                 <div className="silva-home-kpi-card__label">{label}</div>
               </button>
-            ))}
-          </div>
-        )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="silva-home-quick-row">

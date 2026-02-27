@@ -18,11 +18,13 @@ export function ImeiBarcodeScannerModal({ open, onClose, onScan }: Props) {
   const [starting, setStarting] = useState(true);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const onScanRef = useRef(onScan);
+  const scannedRef = useRef(false);
   onScanRef.current = onScan;
 
   useEffect(() => {
     if (!open) return;
 
+    scannedRef.current = false;
     const elementId = SCANNER_DOM_ID;
     let mounted = true;
     let started = false;
@@ -62,15 +64,13 @@ export function ImeiBarcodeScannerModal({ open, onClose, onScan }: Props) {
         cameraConfig,
         scanConfig,
         (decodedText) => {
-          if (!mounted) return;
+          if (!mounted || scannedRef.current) return;
           const digits = decodedText.replace(/\D/g, "");
           if (digits.length >= 10 && digits.length <= 20) {
+            scannedRef.current = true;
+            onScanRef.current(digits);
             if (started) {
-              scanner.stop().then(() => {
-                if (mounted) onScanRef.current(digits);
-              }).catch(() => {});
-            } else if (mounted) {
-              onScanRef.current(digits);
+              scanner.stop().catch(() => {}).then(() => scanner.clear()).catch(() => {});
             }
           }
         },

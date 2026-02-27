@@ -6,7 +6,7 @@ import basicSsl from "@vitejs/plugin-basic-ssl";
 export default defineConfig({
   plugins: [react(), basicSsl()],
   server: {
-    host: true, // Accesible desde la red local (ej. celular) vía http://<tu-IP>:5173
+    host: true, // Accesible desde la red local (celular): https://<tu-IP>:5173
     port: 5173,
     proxy: {
       "/api": {
