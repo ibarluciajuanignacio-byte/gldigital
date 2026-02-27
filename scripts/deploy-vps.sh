@@ -7,6 +7,8 @@ set -e
 REPO_URL="https://github.com/ibarluciajuanignacio-byte/gldigital.git"
 WEB_ROOT="/var/www/gldigital"
 API_PUBLIC_URL="${API_PUBLIC_URL:-http://187.77.61.37}"
+# Subdominio/dominio para HTTPS (ej. app.tudominio.com). Si está vacío, Nginx usa solo la IP.
+GLDI_DOMAIN="${GLDI_DOMAIN:-}"
 
 echo "=== Deploy GLdigital ==="
 
@@ -100,42 +102,47 @@ pm2 start apps/api/dist/server.js --name gldigital-api --cwd "$WEB_ROOT/apps/api
 pm2 save
 echo "PM2 configurado. Ejecutá 'pm2 startup' si es la primera vez."
 
-# 7) Nginx
-cat > /etc/nginx/sites-available/gldigital << 'NGINX'
+# 7) Nginx (server_name: subdominio si GLDI_DOMAIN está definido, si no solo IP)
+SERVER_NAMES="${GLDI_DOMAIN:+$GLDI_DOMAIN }187.77.61.37"
+cat > /etc/nginx/sites-available/gldigital << NGINX
 server {
     listen 80;
-    server_name 187.77.61.37;
+    server_name $SERVER_NAMES;
 
     root /var/www/gldigital/apps/web/dist;
     index index.html;
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files \$uri \$uri/ /index.html;
     }
 
     location /api/ {
         proxy_pass http://127.0.0.1:4000/;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
     location /socket.io/ {
         proxy_pass http://127.0.0.1:4000;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
+        proxy_set_header Host \$host;
     }
 }
 NGINX
 ln -sf /etc/nginx/sites-available/gldigital /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
-echo "Nginx configurado."
+echo "Nginx configurado (server_name: $SERVER_NAMES)."
 
 echo ""
 echo "=== Listo. Abrí http://187.77.61.37 en el navegador ==="
+if [ -n "$GLDI_DOMAIN" ]; then
+  echo "   O con tu dominio: http://$GLDI_DOMAIN"
+  echo "   Para HTTPS: certbot --nginx -d $GLDI_DOMAIN"
+fi

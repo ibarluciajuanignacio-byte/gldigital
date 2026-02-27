@@ -143,15 +143,15 @@ export function SupplierDetailPage() {
   return (
     <div>
       <div className="silva-page-header">
-        <h2 className="silva-page-title">Ficha de proveedor</h2>
-        <p className="silva-page-subtitle">Datos de contacto, anotaciones y órdenes de compra.</p>
+        <h2 className="silva-page-title" style={{ color: "white" }}>Ficha de proveedor</h2>
+        <p className="silva-page-subtitle" style={{ color: "white" }}>Datos de contacto, anotaciones y órdenes de compra.</p>
       </div>
 
       <div className="silva-kpi-grid" style={{ marginBottom: "14px" }}>
         <div className="silva-kpi-card">
           <div className="silva-kpi-label">Proveedor</div>
           <div className="silva-kpi-value" style={{ fontSize: "1.1rem", display: "flex", alignItems: "center", gap: 8 }}>
-            <LordIcon name="proveedores" size={20} primary="var(--silva-primary)" />
+            <LordIcon name="proveedores" size={36} primary="var(--silva-primary)" />
             {supplier.name}
           </div>
           <div className="silva-helper">{supplier.purchaseOrders.length} órdenes de compra</div>
@@ -159,7 +159,7 @@ export function SupplierDetailPage() {
       </div>
 
       <Box className="mb-6">
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12, justifyContent: "center" }}>
           <Link to="/suppliers" className="silva-btn">
             Volver a proveedores
           </Link>

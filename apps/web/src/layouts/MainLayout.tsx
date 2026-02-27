@@ -339,7 +339,10 @@ export function MainLayout() {
           </button>
         </header>
 
-        {mobileMoreOpen && (
+        <div
+          className={`silva-mobile-more-wrapper ${mobileMoreOpen ? "is-open" : ""}`}
+          aria-hidden={!mobileMoreOpen}
+        >
           <div className="silva-mobile-more">
             {links
               .filter((l) => !mobilePrimaryLinks.some((p) => p.to === l.to))
@@ -363,7 +366,7 @@ export function MainLayout() {
               <span>Cerrar sesión</span>
             </button>
           </div>
-        )}
+        </div>
 
         <main className="silva-mobile-content">
           <div style={{ position: "relative", height: "100%", minHeight: "100%" }}>
