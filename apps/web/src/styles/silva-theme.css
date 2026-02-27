@@ -449,11 +449,27 @@ body {
   color: var(--silva-text);
 }
 
+/* Sobre fondo azul (ej. inventario): título de sección en blanco */
+.silva-mobile-content .silva-stock-section-title__text,
+.silva-content .silva-stock-section-title__text {
+  color: white;
+}
+
 .silva-stock-section-title__count {
   margin-left: auto;
   font-size: 0.8rem;
   color: var(--silva-muted);
   font-weight: 500;
+}
+
+.silva-mobile-content .silva-stock-section-title__count,
+.silva-content .silva-stock-section-title__count {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.silva-mobile-content .silva-stock-section-title__bar,
+.silva-content .silva-stock-section-title__bar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
 }
 
 /* Card de producto / modelo en lista */
@@ -532,9 +548,39 @@ body {
   color: var(--silva-muted);
 }
 
-/* Vista detalle de modelo: Volver, título, summary, variant cards */
+/* Vista detalle: título y subtítulo sin fondo (sobre azul), en blanco */
+.silva-mobile-content .silva-stock-detail .silva-stock-detail-back,
+.silva-content .silva-stock-detail .silva-stock-detail-back {
+  color: rgba(255, 255, 255, 0.95);
+}
+.silva-mobile-content .silva-stock-detail .silva-stock-detail-back:hover,
+.silva-content .silva-stock-detail .silva-stock-detail-back:hover {
+  color: white;
+}
+.silva-mobile-content .silva-stock-detail .silva-stock-detail-title,
+.silva-content .silva-stock-detail .silva-stock-detail-title {
+  color: white;
+}
+.silva-mobile-content .silva-stock-detail .silva-stock-detail-subtitle,
+.silva-content .silva-stock-detail .silva-stock-detail-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Vista detalle de modelo: contenedor sin fondo */
 .silva-stock-detail {
   margin-top: 8px;
+}
+
+/* Solo el listado (tabla o grid) tiene panel blanco con blur */
+.silva-stock-detail__panel {
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: var(--silva-radius-lg);
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
 .silva-stock-detail-back {

@@ -738,7 +738,8 @@ export function InventoryPage() {
                 <p className="silva-stock-detail-subtitle">
                   {selectedVariant.color} · {selectedVariant.memory}
                 </p>
-                <div className="silva-table-wrap" style={{ marginTop: 12 }}>
+                <div className="silva-stock-detail__panel">
+                <div className="silva-table-wrap">
                   <table className="silva-table">
                     <thead>
                       <tr>
@@ -834,6 +835,7 @@ export function InventoryPage() {
                     </tbody>
                   </table>
                 </div>
+                </div>
               </div>
             ) : (
               /* Vista grid memoria/color para este modelo (ej. iPhone 13 Pro) */
@@ -848,6 +850,7 @@ export function InventoryPage() {
                 </button>
                 <h2 className="silva-stock-detail-title">{selectedModelGroup.model}</h2>
                 <p className="silva-stock-detail-subtitle">Disponibles para venta</p>
+                <div className="silva-stock-detail__panel">
                 <div className="silva-stock-variant-grid">
                   {(() => {
                     const totalModel = selectedModelGroup.total;
@@ -895,6 +898,7 @@ export function InventoryPage() {
                       );
                     });
                   })()}
+                </div>
                 </div>
               </div>
             )

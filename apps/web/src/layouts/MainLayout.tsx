@@ -422,7 +422,7 @@ export function MainLayout() {
                   }
                 }}
               >
-                <LordIcon name={lordIcon} size={16} />
+                <LordIcon name={lordIcon} size={26} />
                 <span>{label}</span>
               </button>
             );
