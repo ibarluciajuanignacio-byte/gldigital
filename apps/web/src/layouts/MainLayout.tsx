@@ -1,12 +1,13 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/auth";
 import { LogOut, Menu, X, Plus, Barcode, Settings } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "../api/client";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { LordIcon, type LordIconName } from "../components/LordIcon";
+import { ThemeProvider } from "../context/ThemeContext";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { isMobile } from "../utils/isMobile";
 import { getStoredAdminName, getStoredAdminAvatar } from "../utils/adminProfileStorage";
@@ -51,6 +52,7 @@ export function MainLayout() {
     typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false
   );
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const mobileMoreTouchStartY = useRef<number | null>(null);
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
   const [quickModal, setQuickModal] = useState<"payment" | "debt" | "request" | "stock" | null>(null);
   const [quickError, setQuickError] = useState<string | null>(null);
@@ -318,6 +320,7 @@ export function MainLayout() {
         : null;
 
     return (
+      <ThemeProvider isDark={isDarkMode}>
       <div className="silva-mobile-shell silva-layout-fade-in">
         <header className="silva-mobile-topbar">
           <div>
@@ -342,8 +345,21 @@ export function MainLayout() {
         <div
           className={`silva-mobile-more-wrapper ${mobileMoreOpen ? "is-open" : ""}`}
           aria-hidden={!mobileMoreOpen}
+          onClick={() => setMobileMoreOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menú de accesos"
         >
-          <div className="silva-mobile-more">
+          <div
+            className="silva-mobile-more"
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => { mobileMoreTouchStartY.current = e.targetTouches[0].clientY; }}
+            onTouchEnd={(e) => {
+              const start = mobileMoreTouchStartY.current;
+              if (start != null && e.changedTouches[0] && e.changedTouches[0].clientY - start > 60) setMobileMoreOpen(false);
+            }}
+          >
+            <div className="silva-mobile-more__handle" aria-hidden />
             {links
               .filter((l) => !mobilePrimaryLinks.some((p) => p.to === l.to))
               .map((link) => (
@@ -712,10 +728,12 @@ export function MainLayout() {
           </div>
         )}
       </div>
+      </ThemeProvider>
     );
   }
 
   return (
+    <ThemeProvider isDark={isDarkMode}>
     <div className="silva-shell silva-layout-fade-in">
       <div
         className={`silva-sidebar ${mobileMenuOpen ? "is-open" : ""}`}
@@ -841,5 +859,6 @@ export function MainLayout() {
         />
       )}
     </div>
+    </ThemeProvider>
   );
 }
