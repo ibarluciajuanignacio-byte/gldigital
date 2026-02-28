@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/auth";
-import { LogOut, Menu, X, Plus, Barcode, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, Menu, X, Plus, Barcode, Settings, ChevronLeft, ChevronRight, Calculator } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "../api/client";
@@ -8,6 +8,7 @@ import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { LordIcon, type LordIconName } from "../components/LordIcon";
 import { RouteTransitionPreloader } from "../components/RouteTransitionPreloader";
+import { CalculatorModal } from "../components/CalculatorModal";
 import { ThemeProvider } from "../context/ThemeContext";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { isMobile } from "../utils/isMobile";
@@ -58,7 +59,7 @@ export function MainLayout() {
     try { return localStorage.getItem("gldigital-sidebar-collapsed") === "1"; } catch { return false; }
   });
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
-  const [quickModal, setQuickModal] = useState<"payment" | "debt" | "request" | "stock" | null>(null);
+  const [quickModal, setQuickModal] = useState<"payment" | "debt" | "request" | "stock" | "calculator" | null>(null);
   const [quickError, setQuickError] = useState<string | null>(null);
 
   const [resellers, setResellers] = useState<Array<{ id: string; user: { name: string } }>>([]);
@@ -152,7 +153,7 @@ export function MainLayout() {
     return data.resellers ?? [];
   }
 
-  async function openQuickModal(type: "payment" | "debt" | "request" | "stock") {
+  async function openQuickModal(type: "payment" | "debt" | "request" | "stock" | "calculator") {
     setQuickError(null);
     setIsQuickMenuOpen(false);
     setQuickModal(type);
@@ -305,17 +306,19 @@ export function MainLayout() {
     { to: "/chat", label: "Chat", lordIcon: "chat" }
   ];
 
-  /* Acciones rápidas FAB: Compra, Movimientos, Cajas; apiladas arriba del FAB para no solaparse (ancho botón 118px → centrado con x -59) */
+  /* Acciones rápidas FAB: Calculadora, Compra, Movimientos, Cajas; apiladas arriba del FAB para no solaparse (ancho botón 118px → centrado con x -59) */
   const mobileQuickActions: Array<{
     key: string;
     label: string;
-    lordIcon: LordIconName;
+    lordIcon?: LordIconName;
+    icon?: React.ComponentType<{ size?: number }>;
     x: number;
     y: number;
     action: "navigate" | "modal";
     to?: string;
-    modal?: "debt";
+    modal?: "debt" | "calculator";
   }> = [
+    { key: "calculator", label: "Calculadora", icon: Calculator, x: -59, y: -225, action: "modal", modal: "calculator" },
     { key: "purchase", label: "Compra", lordIcon: "orden_compra", x: -59, y: -165, action: "navigate", to: "/purchases" },
     { key: "movements", label: "Movimientos", lordIcon: "deuda", x: -59, y: -105, action: "modal", modal: "debt" },
     { key: "cashboxes", label: "Cajas", lordIcon: "caja", x: -59, y: -45, action: "navigate", to: "/cashboxes" }
@@ -425,7 +428,7 @@ export function MainLayout() {
 
         <div className={`silva-mobile-quick-actions ${isQuickMenuOpen ? "is-open" : ""}`}>
           {mobileQuickActions.map((actionConfig, index) => {
-            const { key, label, lordIcon, x, y, action } = actionConfig;
+            const { key, label, lordIcon, icon: Icon, x, y, action } = actionConfig;
             return (
               <button
                 key={key}
@@ -445,7 +448,7 @@ export function MainLayout() {
                   }
                 }}
               >
-                <LordIcon name={lordIcon} size={26} />
+                {Icon ? <Icon size={26} /> : lordIcon ? <LordIcon name={lordIcon} size={26} /> : null}
                 <span>{label}</span>
               </button>
             );
@@ -493,8 +496,17 @@ export function MainLayout() {
         </div>
 
         {quickModal && (
-          <div className="silva-modal-backdrop silva-mobile-sheet-backdrop" role="dialog" aria-modal="true" aria-label="Acción rápida">
-            <div className="silva-modal silva-mobile-sheet">
+          <div
+            className={`silva-modal-backdrop ${quickModal === "calculator" ? "silva-calculator-backdrop" : "silva-mobile-sheet-backdrop"}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label={quickModal === "calculator" ? "Calculadora" : "Acción rápida"}
+            onClick={() => quickModal === "calculator" && setQuickModal(null)}
+          >
+            {quickModal === "calculator" ? (
+              <CalculatorModal onClose={() => setQuickModal(null)} />
+            ) : (
+            <div className="silva-modal silva-mobile-sheet" onClick={(e) => e.stopPropagation()}>
               {quickModal === "payment" && (
                 <>
                   <h3 className="silva-modal-title">Pago rápido</h3>
@@ -732,6 +744,7 @@ export function MainLayout() {
                 </>
               )}
             </div>
+            )}
           </div>
         )}
       </div>

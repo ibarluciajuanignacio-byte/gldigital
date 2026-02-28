@@ -2112,6 +2112,136 @@ html[data-theme="dark"] .silva-home-stock-legend__pct {
   padding: 18px;
 }
 
+/* Modal calculadora: fondo con blur como en otras partes del proyecto */
+.silva-modal-backdrop.silva-calculator-backdrop {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  align-items: center;
+  justify-content: center;
+}
+
+/* Calculadora estilo Mac (CodePen mattboldt) */
+.silva-cal-wrap {
+  width: min(480px, 92vw);
+  margin: 0 auto;
+}
+.silva-cal {
+  width: 100%;
+  height: auto;
+  padding: 10px 0;
+  margin: 0 auto;
+  background: #232323;
+  border: 1px solid #000;
+  border-radius: 7px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4), inset 0 1px 1px -1px rgba(255, 255, 255, 0.9);
+  background-image: linear-gradient(to bottom, #333, #1f1f1f);
+  overflow: hidden;
+  text-align: center;
+  position: relative;
+}
+.silva-cal-ctrls {
+  list-style: none;
+  margin: 5px 0 0 20px;
+  padding: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.silva-cal-ctrls li {
+  float: left;
+  display: inline;
+}
+.silva-cal-ctrl button {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin-right: 10px;
+  border: 0;
+  border-radius: 100%;
+  cursor: pointer;
+  box-shadow: 0 0 1px rgba(255, 255, 255, 0.3), inset 0 1px 2px 1px rgba(0, 0, 0, 1);
+  background: radial-gradient(9px -4px, #fff 0px, #fff 2px, transparent 4px), linear-gradient(to top, rgba(255, 255, 255, 0.5) 0%, transparent 100%);
+}
+.silva-cal-ctrl--close button { background-color: #f32c31; }
+.silva-cal-ctrl--min button { background-color: #f7bf67; }
+.silva-cal-ctrl--max button { background-color: #89cb5a; }
+.silva-cal-title {
+  font-size: 1.2em;
+  color: #c0c0c0;
+  letter-spacing: 1.2px;
+}
+.silva-cal-screen {
+  width: calc(100% - 56px);
+  max-width: 424px;
+  height: 93px;
+  margin: 12px auto 30px;
+  padding: 15px 20px;
+  color: #c0c0c0;
+  text-align: right;
+  font-size: clamp(1.5em, 5vw, 3em);
+  letter-spacing: 3px;
+  overflow: hidden;
+  border: 1px solid #000;
+  border-radius: 7px;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 1), inset 0 -2px 4px -2px rgba(225, 225, 225, 0.3);
+  background: linear-gradient(to bottom, #3e3e3e 0%, #303030 100%);
+  box-sizing: border-box;
+}
+.silva-cal-buttons {
+  padding: 0;
+  width: calc(100% - 56px);
+  max-width: 423px;
+  margin: 0 auto;
+  overflow: hidden;
+  list-style: none;
+}
+.silva-cal-buttons::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+.silva-cal-buttons li {
+  display: inline;
+  float: left;
+  padding: 0;
+  margin-right: 13px;
+  margin-bottom: 10px;
+}
+.silva-cal-buttons li:nth-child(4n) { margin-right: 0; }
+.silva-cal-btn {
+  display: block;
+  width: 95px;
+  height: 68px;
+  padding: 18px 0 12px;
+  color: #c0c0c0;
+  font-family: inherit;
+  font-size: 1.6em;
+  font-weight: 500;
+  letter-spacing: -2px;
+  background-color: #2f2f2f;
+  border: 1px solid #000;
+  border-radius: 5px;
+  text-align: center;
+  text-decoration: none;
+  text-shadow: 0 -1px 0 #000;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -2px 2px rgba(0, 0, 0, 0.2);
+  background-image: linear-gradient(to bottom, #363636 0%, #313234 40%, #2f2f2f 100%);
+  box-sizing: border-box;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.silva-cal-btn:active {
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+  background-image: linear-gradient(to bottom, #2f2f2f 0%, #363636 100%);
+}
+.silva-cal-btn--tall { height: 151px !important; }
+.silva-cal-btn--wide { width: 205px !important; }
+.silva-cal-btn--shift { margin-top: -78px; }
+.silva-cal-btn--clear { }
+.silva-cal-btn--equal { }
+.silva-cal-btn--val { }
+
 .silva-modal-title {
   margin: 0 0 4px;
   font-family: var(--silva-font-title);
