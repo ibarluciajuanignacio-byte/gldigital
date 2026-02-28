@@ -2169,7 +2169,6 @@ button.silva-home-kpi-card--clickable:focus-visible {
   backdrop-filter: blur(24px);
   background-blend-mode: overlay;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.5) inset,
     0 -2px 12px rgba(0, 0, 0, 0.05),
     0 10px 28px rgba(11, 16, 20, 0.08);
   clip-path: url(#silva-bottom-bar-wave);
@@ -2994,7 +2993,7 @@ button.silva-home-kpi-card--clickable:focus-visible {
   background: linear-gradient(180deg, #ffcc89, #d8860b);
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  transition: transform 0.3s ease, background 0.3s ease;
+  transition: left 0.3s ease, background 0.3s ease;
 }
 
 .silva-darkmode-toggle-label svg {
@@ -3023,7 +3022,7 @@ button.silva-home-kpi-card--clickable:focus-visible {
 
 .silva-darkmode-toggle-input:checked + .silva-darkmode-toggle-label::after {
   left: 27px;
-  transform: translateX(-100%);
+  transform: none;
   background: linear-gradient(180deg, #777, #3a3a3a);
 }
 
@@ -3256,6 +3255,39 @@ html[data-theme="dark"] .silva-home-hero__item span {
   color: #9ca3af;
 }
 
+html[data-theme="dark"] .silva-helper {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-home-section__head h3 {
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-home-section__head span,
+html[data-theme="dark"] .silva-home-section__head button {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-home-section__head button:hover {
+  color: #7dd3fc;
+}
+
+html[data-theme="dark"] .silva-home-list__item {
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-home-list__item strong {
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-home-chip span {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-home-chip strong {
+  color: #e4e5e7;
+}
+
 html[data-theme="dark"] .silva-home-quick-btn {
   background: linear-gradient(180deg, #252525 0%, #1f1f1f 100%);
   border-color: rgba(47, 126, 157, 0.45);
@@ -3337,8 +3369,12 @@ html[data-theme="dark"] .silva-mobile-more__item.is-active {
 }
 
 html[data-theme="dark"] .silva-mobile-bottombar-bar {
-  background: linear-gradient(180deg, rgba(37, 37, 37, 0.9) 0%, rgba(30, 30, 30, 0.95) 100%);
+  background: linear-gradient(180deg, rgba(37, 37, 37, 0.95) 0%, rgba(30, 30, 30, 0.98) 100%);
   border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-mobile-tab {
+  color: #d1d5db;
 }
 
 html[data-theme="dark"] .silva-mobile-tab.is-active {
@@ -3347,6 +3383,19 @@ html[data-theme="dark"] .silva-mobile-tab.is-active {
 
 html[data-theme="dark"] .silva-mobile-tab.is-active .silva-mobile-tab__icon {
   background: rgba(47, 126, 157, 0.3);
+  color: #7dd3fc;
+}
+
+html[data-theme="dark"] .silva-mobile-quick-action {
+  background: linear-gradient(180deg, #252525 0%, #1f1f1f 100%);
+  border-color: rgba(47, 126, 157, 0.45);
+  color: #e4e5e7;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .silva-mobile-quick-action:hover {
+  background: linear-gradient(180deg, rgba(47, 126, 157, 0.25) 0%, rgba(47, 126, 157, 0.12) 100%);
+  border-color: #2F7E9D;
   color: #7dd3fc;
 }
 
@@ -3403,6 +3452,65 @@ html[data-theme="dark"] .silva-stock-detail-title,
 html[data-theme="dark"] .silva-stock-detail-summary__value,
 html[data-theme="dark"] .silva-stock-product-card__name {
   color: #e4e5e7;
+}
+
+/* Login: siempre igual que en light (no afectado por dark mode) */
+html[data-theme="dark"] .silva-login {
+  background: linear-gradient(140deg, #13293d, #1d4b73 50%, var(--color-3));
+}
+
+html[data-theme="dark"] .silva-login .silva-login-card {
+  background: #fff;
+  border-color: #E4E5E7;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+html[data-theme="dark"] .silva-login .silva-login-title {
+  color: #0B1014;
+}
+
+html[data-theme="dark"] .silva-login .silva-login-subtitle {
+  color: #6b7280;
+}
+
+html[data-theme="dark"] .silva-login .silva-input,
+html[data-theme="dark"] .silva-login .silva-input:focus {
+  background: #fff;
+  border-color: #E4E5E7;
+  color: #0B1014;
+}
+
+html[data-theme="dark"] .silva-login .silva-input:focus {
+  box-shadow: 0 0 0 3px rgba(3, 60, 87, 0.12);
+}
+
+html[data-theme="dark"] .silva-login .silva-btn {
+  background: #fff;
+  border-color: #E4E5E7;
+  color: #0B1014;
+}
+
+html[data-theme="dark"] .silva-login .silva-btn:hover {
+  background: #f8fafb;
+}
+
+html[data-theme="dark"] .silva-login .silva-btn-primary {
+  border-color: #033C57;
+  background: linear-gradient(165deg,
+    rgba(80, 140, 170, 0.98) 0%,
+    #033C57 45%,
+    rgba(2, 45, 70, 0.98) 100%);
+  color: #fff;
+}
+
+html[data-theme="dark"] .silva-login .silva-alert {
+  border-color: rgba(236, 52, 76, 0.35);
+  color: #b11d3c;
+  background: rgba(236, 52, 76, 0.08);
+}
+
+html[data-theme="dark"] .silva-login .silva-login-welcome__title {
+  color: #fff;
 }
 
 /* Inicializar data-theme al cargar (evitar flash) */

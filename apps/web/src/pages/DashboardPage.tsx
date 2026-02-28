@@ -66,32 +66,6 @@ export function DashboardPage() {
   const kpiScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = kpiScrollRef.current;
-    if (!el) return;
-    const interval = setInterval(() => {
-      const step = el.clientWidth;
-      el.scrollBy({ left: step, behavior: "smooth" });
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const el = kpiScrollRef.current;
-    if (!el) return;
-    const checkLoop = () => {
-      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 5) {
-        el.scrollTo({ left: 0, behavior: "auto" });
-      }
-    };
-    el.addEventListener("scroll", checkLoop, { passive: true });
-    const interval = setInterval(checkLoop, 300);
-    return () => {
-      el.removeEventListener("scroll", checkLoop);
-      clearInterval(interval);
-    };
-  }, []);
-
-  useEffect(() => {
     api
       .get("/dashboard")
       .then((res) => {
