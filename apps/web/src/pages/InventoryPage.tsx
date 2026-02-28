@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Isotope from "isotope-layout";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../state/auth";
@@ -449,10 +450,76 @@ export function InventoryPage() {
       : devices;
 
   const catalogModelSet = new Set(phoneCatalog.map((c) => c.model));
+
+  function getScopedForSection(section: "sealed" | "used" | "technical_service") {
+    const byCondition = devices.filter((d) => (d.condition ?? "sealed") === section);
+    if (section === "technical_service") {
+      return technicianFilterId ? byCondition.filter((d) => d.technician?.id === technicianFilterId) : byCondition;
+    }
+    return sector === "all" || sector === "pendescanear"
+      ? byCondition
+      : byCondition.filter((d) => (statusMap[d.state]?.sector ?? "office") === sector);
+  }
+
   const filteredScopedDevices =
     phoneCatalog.length > 0 ? scopedDevices.filter((d) => catalogModelSet.has(d.model)) : scopedDevices;
 
   const grouped = groupByModelAndMemory(filteredScopedDevices);
+
+  const groupedSealed =
+    sector !== "pendescanear"
+      ? groupByModelAndMemory(
+          phoneCatalog.length > 0
+            ? getScopedForSection("sealed").filter((d) => catalogModelSet.has(d.model))
+            : getScopedForSection("sealed")
+        )
+      : [];
+  const groupedUsed =
+    sector !== "pendescanear"
+      ? groupByModelAndMemory(
+          phoneCatalog.length > 0
+            ? getScopedForSection("used").filter((d) => catalogModelSet.has(d.model))
+            : getScopedForSection("used")
+        )
+      : [];
+  const groupedTech =
+    sector !== "pendescanear"
+      ? groupByModelAndMemory(
+          phoneCatalog.length > 0
+            ? getScopedForSection("technical_service").filter((d) => catalogModelSet.has(d.model))
+            : getScopedForSection("technical_service")
+        )
+      : [];
+
+  const isotopeGridRef = useRef<HTMLDivElement>(null);
+  const isotopeRef = useRef<InstanceType<typeof Isotope> | null>(null);
+
+  useEffect(() => {
+    if (!isotopeGridRef.current || sector === "pendescanear") return;
+    isotopeRef.current = new Isotope(isotopeGridRef.current, {
+      itemSelector: ".silva-stock-isotope-item",
+      layoutMode: "fitRows",
+      fitRows: { gutter: 10 }
+    });
+    isotopeRef.current.arrange({ filter: `.silva-stock-section-${mainSection}` });
+    return () => {
+      isotopeRef.current?.destroy();
+      isotopeRef.current = null;
+    };
+  }, [sector]);
+
+  useEffect(() => {
+    if (isotopeRef.current) {
+      isotopeRef.current.arrange({ filter: `.silva-stock-section-${mainSection}` });
+    }
+  }, [mainSection]);
+
+  useEffect(() => {
+    if (isotopeRef.current && sector !== "pendescanear") {
+      isotopeRef.current.reloadItems();
+      isotopeRef.current.arrange({ filter: `.silva-stock-section-${mainSection}` });
+    }
+  }, [groupedSealed.length, groupedUsed.length, groupedTech.length, mainSection, sector]);
 
 
   return (
@@ -642,6 +709,7 @@ export function InventoryPage() {
           <div className="silva-stock-kpi-grid" style={{ marginBottom: 16 }}>
             {stockKpiCards.map((item) => {
             const Icon = item.icon;
+            const lordIconName = item.key === "office" ? "stock" : item.key === "consignment" ? "coonsignacion" : undefined;
             const isActive =
               (item.key === "total" && sector === "all") ||
               (item.key === "pendescanear" && sector === "pendescanear") ||
@@ -660,7 +728,7 @@ export function InventoryPage() {
                     <div className="silva-stock-kpi-card__value">{item.value}</div>
                   </div>
                   <div className="silva-stock-kpi-card__icon" aria-hidden>
-                    <Icon size={20} />
+                    {lordIconName ? <LordIcon name={lordIconName} size={20} /> : <Icon size={20} />}
                   </div>
                 </div>
               </button>
@@ -947,32 +1015,87 @@ export function InventoryPage() {
                   ))}
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {grouped.map((group) => (
-                    <button
-                      key={group.model}
-                      type="button"
-                      className="silva-stock-product-card"
-                      style={{ width: "100%", textAlign: "left", border: "none", cursor: "pointer", font: "inherit" }}
-                      onClick={() => {
-                        setSelectedModelGroup(group);
-                        setSelectedVariant(null);
-                      }}
-                    >
-                      <span className="silva-stock-product-card__arrow" aria-hidden>
-                        <ChevronRight size={16} />
-                      </span>
-                      <div className="silva-stock-product-card__body">
-                        <div className="silva-stock-product-card__name">{group.model}</div>
-                        <div className="silva-stock-product-card__variants">
-                          {group.memories.length} {group.memories.length === 1 ? "memoria" : "memorias"}
+                <div ref={isotopeGridRef} className="silva-stock-isotope-grid" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {groupedSealed.map((group, i) => (
+                    <div key={`sealed-${group.model}-${i}`} className="silva-stock-isotope-item silva-stock-section-sealed">
+                      <button
+                        type="button"
+                        className="silva-stock-product-card"
+                        style={{ width: "100%", textAlign: "left", border: "none", cursor: "pointer", font: "inherit" }}
+                        onClick={() => {
+                          setSelectedModelGroup(group);
+                          setSelectedVariant(null);
+                        }}
+                      >
+                        <span className="silva-stock-product-card__arrow" aria-hidden>
+                          <ChevronRight size={16} />
+                        </span>
+                        <div className="silva-stock-product-card__body">
+                          <div className="silva-stock-product-card__name">{group.model}</div>
+                          <div className="silva-stock-product-card__variants">
+                            {group.memories.length} {group.memories.length === 1 ? "memoria" : "memorias"}
+                          </div>
                         </div>
-                      </div>
-                      <div className="silva-stock-product-card__qty">
-                        <span className="silva-stock-product-card__qty-value">{group.total}</span>
-                        <span className="silva-stock-product-card__qty-label">unidades</span>
-                      </div>
-                    </button>
+                        <div className="silva-stock-product-card__qty">
+                          <span className="silva-stock-product-card__qty-value">{group.total}</span>
+                          <span className="silva-stock-product-card__qty-label">unidades</span>
+                        </div>
+                      </button>
+                    </div>
+                  ))}
+                  {groupedUsed.map((group, i) => (
+                    <div key={`used-${group.model}-${i}`} className="silva-stock-isotope-item silva-stock-section-used">
+                      <button
+                        type="button"
+                        className="silva-stock-product-card"
+                        style={{ width: "100%", textAlign: "left", border: "none", cursor: "pointer", font: "inherit" }}
+                        onClick={() => {
+                          setSelectedModelGroup(group);
+                          setSelectedVariant(null);
+                        }}
+                      >
+                        <span className="silva-stock-product-card__arrow" aria-hidden>
+                          <ChevronRight size={16} />
+                        </span>
+                        <div className="silva-stock-product-card__body">
+                          <div className="silva-stock-product-card__name">{group.model}</div>
+                          <div className="silva-stock-product-card__variants">
+                            {group.memories.length} {group.memories.length === 1 ? "memoria" : "memorias"}
+                          </div>
+                        </div>
+                        <div className="silva-stock-product-card__qty">
+                          <span className="silva-stock-product-card__qty-value">{group.total}</span>
+                          <span className="silva-stock-product-card__qty-label">unidades</span>
+                        </div>
+                      </button>
+                    </div>
+                  ))}
+                  {groupedTech.map((group, i) => (
+                    <div key={`tech-${group.model}-${i}`} className="silva-stock-isotope-item silva-stock-section-technical_service">
+                      <button
+                        type="button"
+                        className="silva-stock-product-card"
+                        style={{ width: "100%", textAlign: "left", border: "none", cursor: "pointer", font: "inherit" }}
+                        onClick={() => {
+                          setSelectedModelGroup(group);
+                          setSelectedVariant(null);
+                        }}
+                      >
+                        <span className="silva-stock-product-card__arrow" aria-hidden>
+                          <ChevronRight size={16} />
+                        </span>
+                        <div className="silva-stock-product-card__body">
+                          <div className="silva-stock-product-card__name">{group.model}</div>
+                          <div className="silva-stock-product-card__variants">
+                            {group.memories.length} {group.memories.length === 1 ? "memoria" : "memorias"}
+                          </div>
+                        </div>
+                        <div className="silva-stock-product-card__qty">
+                          <span className="silva-stock-product-card__qty-value">{group.total}</span>
+                          <span className="silva-stock-product-card__qty-label">unidades</span>
+                        </div>
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}

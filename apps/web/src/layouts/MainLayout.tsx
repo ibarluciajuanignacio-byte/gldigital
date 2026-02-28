@@ -1,12 +1,13 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/auth";
-import { LogOut, Menu, X, Plus, Barcode, Settings } from "lucide-react";
+import { LogOut, Menu, X, Plus, Barcode, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "../api/client";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { LordIcon, type LordIconName } from "../components/LordIcon";
+import { RouteTransitionPreloader } from "../components/RouteTransitionPreloader";
 import { ThemeProvider } from "../context/ThemeContext";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { isMobile } from "../utils/isMobile";
@@ -53,6 +54,9 @@ export function MainLayout() {
   );
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const mobileMoreTouchStartY = useRef<number | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem("gldigital-sidebar-collapsed") === "1"; } catch { return false; }
+  });
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
   const [quickModal, setQuickModal] = useState<"payment" | "debt" | "request" | "stock" | null>(null);
   const [quickError, setQuickError] = useState<string | null>(null);
@@ -116,6 +120,10 @@ export function MainLayout() {
     setMobileMoreOpen(false);
     setIsQuickMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    try { localStorage.setItem("gldigital-sidebar-collapsed", sidebarCollapsed ? "1" : "0"); } catch { /* ignore */ }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     const handler = () => setProfileVersion((v) => v + 1);
@@ -359,7 +367,6 @@ export function MainLayout() {
               if (start != null && e.changedTouches[0] && e.changedTouches[0].clientY - start > 60) setMobileMoreOpen(false);
             }}
           >
-            <div className="silva-mobile-more__handle" aria-hidden />
             {links
               .filter((l) => !mobilePrimaryLinks.some((p) => p.to === l.to))
               .map((link) => (
@@ -728,13 +735,14 @@ export function MainLayout() {
           </div>
         )}
       </div>
+      <RouteTransitionPreloader />
       </ThemeProvider>
     );
   }
 
   return (
     <ThemeProvider isDark={isDarkMode}>
-    <div className="silva-shell silva-layout-fade-in">
+    <div className={`silva-shell silva-layout-fade-in ${sidebarCollapsed ? "silva-sidebar-collapsed" : ""}`}>
       <div
         className={`silva-sidebar ${mobileMenuOpen ? "is-open" : ""}`}
         aria-label="Barra lateral principal"
@@ -776,16 +784,17 @@ export function MainLayout() {
               to={link.to}
               end={link.to === "/"}
               className={`silva-nav__link ${isActivePath(link.to) ? "is-active" : ""}`}
+              title={sidebarCollapsed ? link.label : undefined}
             >
-              <NavIcon item={link} size={16} />
+              <NavIcon item={link} size={sidebarCollapsed ? 28 : 16} />
               <span>{link.label}</span>
             </NavLink>
           ))}
         </nav>
 
         <div className="silva-sidebar__footer">
-          <button type="button" onClick={logout} className="silva-nav__link" style={{ width: "100%" }}>
-            <LogOut size={16} />
+          <button type="button" onClick={logout} className="silva-nav__link" style={{ width: "100%" }} title={sidebarCollapsed ? "Cerrar sesión" : undefined}>
+            <LogOut size={sidebarCollapsed ? 28 : 16} />
             <span>Cerrar sesión</span>
           </button>
         </div>
@@ -806,6 +815,14 @@ export function MainLayout() {
               aria-label="Abrir menú"
             >
               <Menu size={18} />
+            </button>
+            <button
+              type="button"
+              className="silva-sidebar-toggle"
+              onClick={() => setSidebarCollapsed((c) => !c)}
+              aria-label={sidebarCollapsed ? "Expandir menú" : "Retraer menú"}
+            >
+              {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
             </button>
             <h1 className="silva-topbar__title">{currentTitle}</h1>
           </div>
@@ -844,7 +861,7 @@ export function MainLayout() {
           </div>
         </main>
         <footer className="silva-footer">
-          <span>GLdigital - interfaz Silva adaptada</span>
+          <span>Powered by studio BigLigas Argentina</span>
         </footer>
       </div>
 
@@ -858,6 +875,7 @@ export function MainLayout() {
           }}
         />
       )}
+      <RouteTransitionPreloader />
     </div>
     </ThemeProvider>
   );

@@ -63,7 +63,7 @@ body {
   z-index: 40;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, width 0.25s ease;
 }
 
 .silva-sidebar__brand {
@@ -118,6 +118,12 @@ body {
   padding: 14px 10px;
   overflow-y: auto;
   flex: 1;
+  /* Scroll sin barra visible: se sigue scrolleando con rueda y touch */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.silva-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .silva-nav__title {
@@ -157,8 +163,64 @@ body {
   border-top: 1px solid var(--silva-border);
 }
 
+/* Sidebar retraído (solo iconos en grande, sin textos) */
+.silva-shell.silva-sidebar-collapsed .silva-sidebar {
+  width: 80px;
+}
+.silva-shell.silva-sidebar-collapsed .silva-main {
+  margin-left: 80px;
+}
+.silva-shell.silva-sidebar-collapsed .silva-sidebar__brand {
+  justify-content: center;
+  padding: 0 8px;
+}
+.silva-shell.silva-sidebar-collapsed .silva-sidebar__brand .silva-mobile-toggle,
+.silva-shell.silva-sidebar-collapsed .silva-sidebar__brand-text {
+  display: none;
+}
+.silva-shell.silva-sidebar-collapsed .silva-sidebar__brand-logo {
+  height: 36px;
+}
+.silva-shell.silva-sidebar-collapsed .silva-sidebar__user {
+  flex-direction: column;
+  padding: 12px 8px;
+  gap: 0;
+  align-items: center;
+}
+.silva-shell.silva-sidebar-collapsed .silva-sidebar__user > div {
+  display: none;
+}
+.silva-shell.silva-sidebar-collapsed .silva-sidebar__user .silva-avatar {
+  width: 36px;
+  height: 36px;
+}
+.silva-shell.silva-sidebar-collapsed .silva-nav__title {
+  display: none;
+}
+.silva-shell.silva-sidebar-collapsed .silva-nav {
+  padding: 10px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.silva-shell.silva-sidebar-collapsed .silva-nav__link {
+  justify-content: center;
+  padding: 12px;
+}
+.silva-shell.silva-sidebar-collapsed .silva-nav__link span {
+  display: none;
+}
+.silva-shell.silva-sidebar-collapsed .silva-sidebar__footer .silva-nav__link {
+  justify-content: center;
+  padding: 12px;
+}
+.silva-shell.silva-sidebar-collapsed .silva-sidebar__footer .silva-nav__link span {
+  display: none;
+}
+
 .silva-main {
   margin-left: var(--silva-sidebar-width);
+  transition: margin-left 0.25s ease;
   min-height: 100vh;
   background:
     radial-gradient(ellipse 120% 70% at 50% -15%, rgba(255, 255, 255, 0.28) 0%, transparent 48%),
@@ -209,6 +271,25 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.silva-sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--silva-border);
+  background: #fff;
+  color: var(--silva-text);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+.silva-sidebar-toggle:hover {
+  background: var(--silva-primary-light);
+  color: var(--silva-primary);
+  border-color: var(--silva-primary-border);
 }
 
 .silva-overlay {
@@ -2065,19 +2146,6 @@ button.silva-home-kpi-card--clickable:focus-visible {
   transform: translateY(0);
 }
 
-.silva-mobile-more__handle {
-  flex-shrink: 0;
-  height: 20px;
-  margin: 8px auto 4px;
-  width: 40px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.15);
-}
-
-html[data-theme="dark"] .silva-mobile-more__handle {
-  background: rgba(255, 255, 255, 0.2);
-}
-
 .silva-mobile-more {
   position: relative;
   z-index: 29;
@@ -2407,6 +2475,10 @@ html[data-theme="dark"] .silva-mobile-more__handle {
 
   .silva-mobile-toggle {
     display: inline-flex;
+  }
+
+  .silva-sidebar-toggle {
+    display: none !important;
   }
 
   .silva-overlay.is-open {
@@ -3057,7 +3129,155 @@ html[data-theme="dark"] .silva-mobile-more__handle {
 }
 
 .silva-darkmode-toggle-input:checked + .silva-darkmode-toggle-label svg.moon {
-  fill: #fff;
+  fill: #eab308;
+}
+
+/* ========== Preloader entre cambios de vista (logo BigLigas + átomo) ========== */
+.silva-route-preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.22s ease-out;
+}
+
+.silva-route-preloader--exit {
+  opacity: 0;
+}
+
+.silva-route-preloader__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition: opacity 0.22s ease-out;
+}
+
+.silva-route-preloader--exit .silva-route-preloader__backdrop {
+  opacity: 0;
+}
+
+.silva-route-preloader__icon-wrap {
+  position: relative;
+  z-index: 1;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.92;
+  transition: opacity 0.22s ease-out;
+}
+
+.silva-route-preloader--exit .silva-route-preloader__icon-wrap {
+  opacity: 0;
+}
+
+/* Brillo blanco iluminado detrás del logo */
+.silva-route-preloader__glow {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.2) 40%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  filter: blur(14px);
+  -webkit-filter: blur(14px);
+  animation: silva-preloader-glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes silva-preloader-glow-pulse {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+/* Órbitas de electrones */
+.silva-route-preloader__orbit {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 100%;
+  height: 100%;
+  animation: silva-preloader-orbit-spin 2.2s linear infinite;
+}
+
+.silva-route-preloader__orbit--outer {
+  width: 110%;
+  height: 110%;
+  animation-duration: 2.8s;
+  animation-direction: reverse;
+}
+
+.silva-route-preloader__orbit--inner {
+  width: 76%;
+  height: 76%;
+}
+
+@keyframes silva-preloader-orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Electrones en la órbita (ángulo vía --angle, radio vía translateY) */
+.silva-route-preloader__electron {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  transform: rotate(var(--angle, 0deg)) translateY(-66px);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.8),
+    0 0 20px rgba(255, 255, 255, 0.4);
+  opacity: 0.95;
+}
+
+.silva-route-preloader__orbit--inner .silva-route-preloader__electron {
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  margin-top: -3px;
+  transform: rotate(var(--angle, 0deg)) translateY(-46px);
+  box-shadow:
+    0 0 8px rgba(255, 255, 255, 0.9),
+    0 0 14px rgba(255, 255, 255, 0.5);
+}
+
+.silva-route-preloader__orbit--inner .silva-route-preloader__electron:nth-child(1) { --angle: 0deg; }
+.silva-route-preloader__orbit--inner .silva-route-preloader__electron:nth-child(2) { --angle: 120deg; }
+.silva-route-preloader__orbit--inner .silva-route-preloader__electron:nth-child(3) { --angle: 240deg; }
+.silva-route-preloader__orbit--outer .silva-route-preloader__electron:nth-child(1) { --angle: 0deg; }
+.silva-route-preloader__orbit--outer .silva-route-preloader__electron:nth-child(2) { --angle: 180deg; }
+
+/* Logo G como núcleo del átomo */
+.silva-route-preloader__logo {
+  position: relative;
+  z-index: 2;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  opacity: 0.94;
+  mix-blend-mode: lighten;
+  animation: silva-preloader-nucleus 2.5s ease-in-out infinite;
+}
+
+@keyframes silva-preloader-nucleus {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
 }
 
 /* ========== DARK MODE – tema profesional (estilo dashboard oscuro) ========== */
@@ -3106,6 +3326,16 @@ html[data-theme="dark"] .silva-nav__title {
   color: #6b7280;
 }
 
+html[data-theme="dark"] .silva-nav__link {
+  color: #e4e5e7;
+  background: transparent;
+  border: none;
+}
+html[data-theme="dark"] .silva-sidebar__footer button.silva-nav__link {
+  color: #e4e5e7;
+  background: transparent;
+}
+
 html[data-theme="dark"] .silva-nav__link:hover {
   background: rgba(47, 126, 157, 0.15);
   color: #2F7E9D;
@@ -3140,6 +3370,17 @@ html[data-theme="dark"] .silva-mobile-toggle {
   background: #252525;
   border-color: #2e2e2e;
   color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-sidebar-toggle {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+html[data-theme="dark"] .silva-sidebar-toggle:hover {
+  background: rgba(47, 126, 157, 0.25);
+  color: #7dd3fc;
+  border-color: rgba(47, 126, 157, 0.5);
 }
 
 html[data-theme="dark"] .silva-footer {
@@ -3224,6 +3465,49 @@ html[data-theme="dark"] .silva-btn:hover {
 
 html[data-theme="dark"] .silva-label {
   color: #9ca3af;
+}
+
+/* Badges: contraste legible en modo oscuro */
+html[data-theme="dark"] .silva-badge-primary {
+  color: #e0f2fe;
+  background: rgba(47, 126, 157, 0.45);
+  border: 1px solid rgba(47, 126, 157, 0.6);
+}
+
+html[data-theme="dark"] .silva-badge-success {
+  color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+}
+
+html[data-theme="dark"] .silva-badge-danger {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+html[data-theme="dark"] .silva-badge-pending {
+  color: #d1d5db;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #4b5563;
+}
+
+html[data-theme="dark"] .silva-badge-warning {
+  color: #fde68a;
+  background: rgba(245, 148, 64, 0.3);
+  border: 1px solid rgba(245, 148, 64, 0.5);
+}
+
+html[data-theme="dark"] .silva-badge-secondary {
+  color: #e4e5e7;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+html[data-theme="dark"] .silva-badge-outline {
+  color: #d1d5db;
+  background: transparent;
+  border: 1px solid #4b5563;
 }
 
 html[data-theme="dark"] .silva-modal {

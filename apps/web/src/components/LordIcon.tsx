@@ -17,6 +17,7 @@ export const LORDICON_NAMES = [
   "deuda",
   "map",
   "orden_compra",
+  "preloader",
   "proveedores",
   "resellers",
   "stock",
