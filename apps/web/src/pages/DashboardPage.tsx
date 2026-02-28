@@ -390,9 +390,10 @@ export function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number, name: string) => {
-                        const pct = chartTotal > 0 ? ((value / chartTotal) * 100).toFixed(0) : "0";
-                        return [`${value} (${pct}%)`, name];
+                      formatter={(value, name) => {
+                        const v = typeof value === "number" ? value : 0;
+                        const pct = chartTotal > 0 ? ((v / chartTotal) * 100).toFixed(0) : "0";
+                        return [`${v} (${pct}%)`, name ?? ""];
                       }}
                       contentStyle={{
                         background: isDarkMode ? "#252525" : "#fff",

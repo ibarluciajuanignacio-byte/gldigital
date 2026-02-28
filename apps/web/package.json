@@ -28,6 +28,7 @@
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@types/isotope-layout": "^3.0.6",
     "@eslint/js": "^9.39.1",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^24.10.1",
