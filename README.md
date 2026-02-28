@@ -48,6 +48,15 @@ El endpoint `/auth/bootstrap` crea usuarios demo:
 
 La UI llama este bootstrap automáticamente en el login para facilitar pruebas iniciales.
 
+## Datos: local vs servidor
+
+El **número de equipos** (y el resto de datos) depende de la **base de datos** a la que se conecta cada entorno:
+
+- **Servidor (VPS):** usa su propia base (ej. MySQL en el servidor). Si ahí cargaste 3 equipos, el dashboard mostrará 3.
+- **Local:** usa la base configurada en `apps/api/.env` (`DATABASE_URL`). Si es una DB vacía o distinta, verás 0 equipos u otros números.
+
+El código es el mismo (actualizás desde el repo); lo que cambia es la **datos** en cada base. Para tener los mismos números en local tendrías que apuntar a la misma DB (no recomendado para producción) o cargar datos de prueba (seed) en tu DB local.
+
 ## Adjuntos en local y en cloud
 
 - Desarrollo local: usar `STORAGE_MODE=local` (por defecto en `.env.example`).

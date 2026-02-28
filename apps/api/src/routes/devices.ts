@@ -231,3 +231,44 @@ devicesRouter.patch("/:id", requireRole("admin"), async (req, res) => {
   });
   res.json({ device });
 });
+
+// Eliminar equipo de stock (solo si no está consignado ni asignado a revendedor)
+devicesRouter.delete("/:id", requireRole("admin"), async (req, res) => {
+  const actorId = String(req.user!.id);
+  const deviceId = String(req.params.id);
+  const device = await prisma.device.findUnique({
+    where: { id: deviceId },
+    include: {
+      consignments: { take: 1 },
+      repairRecords: { where: { returnedAt: null }, take: 1 }
+    }
+  });
+  if (!device) {
+    res.status(404).json({ message: "Equipo no encontrado." });
+    return;
+  }
+  if (device.resellerId != null) {
+    res.status(400).json({ message: "No se puede eliminar: el equipo está asignado a un revendedor. Quitá la consignación primero." });
+    return;
+  }
+  if (device.consignments.length > 0) {
+    res.status(400).json({ message: "No se puede eliminar: el equipo tiene consignaciones. Cerrá o revirté la consignación primero." });
+    return;
+  }
+  if (device.repairRecords.length > 0) {
+    res.status(400).json({ message: "No se puede eliminar: el equipo está en reparación. Dalo de vuelta desde técnico primero." });
+    return;
+  }
+  await prisma.$transaction([
+    prisma.repairRecord.deleteMany({ where: { deviceId } }),
+    prisma.device.delete({ where: { id: deviceId } })
+  ]);
+  await writeAuditLog({
+    actorId,
+    action: "device.deleted",
+    entityType: "device",
+    entityId: deviceId,
+    meta: { imei: device.imei }
+  });
+  res.status(204).send();
+});

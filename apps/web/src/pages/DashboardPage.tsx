@@ -148,7 +148,7 @@ export function DashboardPage() {
     : [];
   const debtByResellerData = charts.debtByReseller ?? [];
   const topFiveDebts = debtByResellerData.slice(0, 5);
-  const debtAlertsDisplay: DebtAlertItem[] =
+  const debtAlertsDisplay: DebtAlertItem[] = (
     topFiveDebts.length > 0
       ? topFiveDebts.map((b) => ({
           resellerName: b.resellerName,
@@ -156,7 +156,8 @@ export function DashboardPage() {
           daysOwing: 0,
           resellerId: b.resellerId
         }))
-      : MOCK_DEBT_ALERTS;
+      : MOCK_DEBT_ALERTS
+  ).sort((a, b) => b.daysOwing - a.daysOwing);
 
   const formatArs = (value: number | null | undefined) =>
     typeof value === "number"

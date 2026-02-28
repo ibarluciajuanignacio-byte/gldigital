@@ -105,6 +105,7 @@ export function InventoryPage() {
     id: string; reason?: string | null; notes?: string | null; priceCents?: number | null; sentAt: string; returnedAt?: string | null;
     technician: { id: string; name: string };
   }>>([]);
+  const [deletingDeviceId, setDeletingDeviceId] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<Array<{
     id: string;
     orderId: string;
@@ -186,6 +187,26 @@ export function InventoryPage() {
       );
     }
   }, [user?.role]);
+
+  async function deleteDevice(device: Device) {
+    if (!window.confirm(`¿Eliminar equipo IMEI ${device.imei} del stock? Esta acción no se puede deshacer.`)) return;
+    setDeletingDeviceId(device.id);
+    setError(null);
+    try {
+      await api.delete(`/devices/${device.id}`);
+      setDevices((prev) => prev.filter((d) => d.id !== device.id));
+      setSelectedVariant((v) => {
+        if (!v) return null;
+        const next = v.devices.filter((d) => d.id !== device.id);
+        return next.length === 0 ? null : { ...v, devices: next };
+      });
+    } catch (err: unknown) {
+      const res = err && typeof err === "object" && "response" in err ? (err as { response?: { data?: { message?: string } } }).response : undefined;
+      setError(res?.data?.message ?? "No se pudo eliminar el equipo.");
+    } finally {
+      setDeletingDeviceId(null);
+    }
+  }
 
   async function sendDeviceToTechnician() {
     if (!sendToTechDevice || !sendToTechTechnicianId) return;
@@ -895,6 +916,18 @@ export function InventoryPage() {
                                 >
                                   Ver historial
                                 </button>
+                                {!device.reseller && !inTech && (
+                                  <button
+                                    type="button"
+                                    className="silva-btn silva-btn-ghost"
+                                    style={{ color: "var(--silva-danger, #dc2626)" }}
+                                    onClick={() => deleteDevice(device)}
+                                    disabled={deletingDeviceId === device.id}
+                                    title="Eliminar equipo del stock (solo si no está consignado)"
+                                  >
+                                    {deletingDeviceId === device.id ? "Eliminando..." : "Eliminar"}
+                                  </button>
+                                )}
                               </td>
                             )}
                           </tr>
