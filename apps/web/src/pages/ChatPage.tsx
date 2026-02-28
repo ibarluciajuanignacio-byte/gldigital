@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api, getApiBaseUrl } from "../api/client";
 
 function attachmentViewUrl(objectKey: string): string {
@@ -69,6 +69,8 @@ function lastSeenLabel(lastSeenAt: string | null | undefined): string {
 
 export function ChatPage() {
   const { token, user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string>("");
@@ -156,6 +158,14 @@ export function ChatPage() {
   useEffect(() => {
     loadConversations();
   }, []);
+
+  useEffect(() => {
+    const draft = (location.state as { draftMessage?: string } | null)?.draftMessage;
+    if (draft) {
+      setText(draft);
+      navigate(location.pathname + location.search, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, location.search, navigate]);
 
   function playNotificationSound() {
     try {

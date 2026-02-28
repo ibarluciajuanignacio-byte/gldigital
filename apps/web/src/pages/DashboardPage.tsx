@@ -4,21 +4,15 @@ import { Box } from "../components/Box";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { LordIcon, type LordIconName } from "../components/LordIcon";
+import { useDarkMode } from "../hooks/useDarkMode";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { AlertTriangle, MessageCircle } from "lucide-react";
 
 type DashboardCharts = {
   devicesByState?: Record<string, number>;
   consignmentsByStatus?: Record<string, number>;
   paymentsByStatus?: Record<string, number>;
-  debtByReseller?: { resellerName: string; balanceCents: number }[];
-};
-
-type UpcomingBirthday = {
-  kind: "reseller" | "client";
-  id: string;
-  name: string;
-  birthday: string;
-  daysLeft: number;
-  owner: string | null;
+  debtByReseller?: { resellerId?: string; resellerName: string; balanceCents: number }[];
 };
 
 type LiveDollarOfficial = {
@@ -52,6 +46,32 @@ const PAYMENT_LABELS: Record<string, string> = {
   rejected: "Rechazados"
 };
 
+/** Item de alerta: mock tiene resellerName, amountUsd, daysOwing; con datos reales puede incluir resellerId */
+type DebtAlertItem = { resellerName: string; amountUsd: number; daysOwing: number; resellerId?: string };
+
+/** Datos inventados para dar forma a la tarjeta de alertas de deuda (luego conectar con datos reales) */
+const MOCK_DEBT_ALERTS: DebtAlertItem[] = [
+  { resellerName: "Revendedor 1", amountUsd: 750, daysOwing: 45 },
+  { resellerName: "Revendedor 2", amountUsd: 500, daysOwing: 7 },
+  { resellerName: "Revendedor 3", amountUsd: 320, daysOwing: 15 },
+  { resellerName: "Revendedor 4", amountUsd: 180, daysOwing: 60 },
+  { resellerName: "Revendedor 5", amountUsd: 90, daysOwing: 3 }
+];
+
+function debtAlertTrafficLight(daysOwing: number): "red" | "yellow" | "green" {
+  if (daysOwing >= 30) return "red";
+  if (daysOwing >= 8) return "yellow";
+  return "green";
+}
+
+/** Datos de ejemplo para mostrar el gráfico cuando no hay stock cargado (solo visual) */
+const FAKE_STOCK_CHART_DATA = [
+  { key: "available", name: "Disponibles", value: 42 },
+  { key: "consigned", name: "Consignados", value: 28 },
+  { key: "sold", name: "Vendidos", value: 19 },
+  { key: "returned", name: "Devueltos", value: 6 }
+];
+
 function objectToChartData(obj: Record<string, number>, labelMap: Record<string, string>) {
   return Object.entries(obj).map(([key, value]) => ({ key, name: labelMap[key] ?? key, value }));
 }
@@ -61,8 +81,9 @@ export function DashboardPage() {
   const [kpis, setKpis] = useState<Record<string, number>>({});
   const [charts, setCharts] = useState<DashboardCharts>({});
   const [liveDollar, setLiveDollar] = useState<LiveDollarOfficial | null>(null);
-  const [upcomingBirthdays, setUpcomingBirthdays] = useState<UpcomingBirthday[]>([]);
   const [dollarBarExpanded, setDollarBarExpanded] = useState(false);
+  const [isDarkMode] = useDarkMode();
+  const [selectedDebtAlertIndex, setSelectedDebtAlertIndex] = useState<number | null>(null);
   const kpiScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,13 +97,6 @@ export function DashboardPage() {
         setKpis({});
         setCharts({});
       });
-  }, []);
-
-  useEffect(() => {
-    api
-      .get("/notifications/birthdays/upcoming?days=14")
-      .then((res) => setUpcomingBirthdays(res.data.upcoming ?? []))
-      .catch(() => setUpcomingBirthdays([]));
   }, []);
 
   useEffect(() => {
@@ -129,25 +143,46 @@ export function DashboardPage() {
         : [],
     [charts.devicesByState]
   );
-  const consignmentsByStatusData = useMemo(
-    () =>
-      charts.consignmentsByStatus
-        ? objectToChartData(charts.consignmentsByStatus, { active: "Activas", sold: "Vendidas" }).filter(
-            (d) => d.value > 0
-          )
-        : [],
-    [charts.consignmentsByStatus]
-  );
   const paymentsByStatusData = charts.paymentsByStatus
     ? objectToChartData(charts.paymentsByStatus, PAYMENT_LABELS).filter((d) => d.value > 0)
     : [];
   const debtByResellerData = charts.debtByReseller ?? [];
-  const totalDevices = devicesByStateData.reduce((acc, d) => acc + d.value, 0);
+  const topFiveDebts = debtByResellerData.slice(0, 5);
+  const debtAlertsDisplay: DebtAlertItem[] =
+    topFiveDebts.length > 0
+      ? topFiveDebts.map((b) => ({
+          resellerName: b.resellerName,
+          amountUsd: b.balanceCents / 100,
+          daysOwing: 0,
+          resellerId: b.resellerId
+        }))
+      : MOCK_DEBT_ALERTS;
 
   const formatArs = (value: number | null | undefined) =>
     typeof value === "number"
       ? value.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
       : "--";
+
+  async function handleSendMessageToReseller(item: DebtAlertItem) {
+    const daysText =
+      item.daysOwing === 0 ? "" : item.daysOwing === 1 ? " (hace 1 día)" : ` (hace ${item.daysOwing} días)`;
+    const draftMessage = `Hola ${item.resellerName}, te escribimos por tu deuda de ${item.amountUsd.toFixed(2)} USD${daysText}. Te pedimos regularizar la deuda cuando puedas.`;
+    if (item.resellerId) {
+      try {
+        const { data } = await api.get(`/resellers/${item.resellerId}/profile`);
+        let conversationId = data?.chat?.dmConversationId ?? null;
+        if (!conversationId) {
+          const res = await api.post(`/chat/dm/by-reseller/${item.resellerId}`);
+          conversationId = res.data.conversationId as string;
+        }
+        navigate(`/chat?conversationId=${encodeURIComponent(conversationId)}`, { state: { draftMessage } });
+      } catch {
+        navigate("/chat", { state: { draftMessage } });
+      }
+    } else {
+      navigate("/chat", { state: { draftMessage } });
+    }
+  }
 
   return (
     <div className="silva-home">
@@ -238,6 +273,64 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {isAdmin && (
+        <Box className={`silva-home-section silva-home-debt-alerts ${isDarkMode ? "silva-home-debt-alerts--dark" : ""}`} role="region" aria-label="Alertas de deuda">
+          <div className="silva-home-section__head">
+            <h2 className="silva-home-section__title silva-home-debt-alerts__title">
+              <AlertTriangle size={22} className="silva-home-debt-alerts__icon" aria-hidden />
+              Alertas de deuda
+            </h2>
+            <button type="button" onClick={() => navigate("/debts")} className="silva-home-debt-alerts__cta">
+              Ver Deuda viva
+            </button>
+          </div>
+          <p className="silva-home-debt-alerts__intro">Quién nos debe y hace cuánto tiempo.</p>
+          {debtAlertsDisplay.length > 0 ? (
+            <ul className="silva-home-debt-alerts__list">
+              {debtAlertsDisplay.map((item, index) => {
+                const light = debtAlertTrafficLight(item.daysOwing);
+                const isSelected = selectedDebtAlertIndex === index;
+                return (
+                  <li key={item.resellerName + index}>
+                    <button
+                      type="button"
+                      className={`silva-home-debt-alerts__item ${isSelected ? "is-selected" : ""}`}
+                      onClick={() => setSelectedDebtAlertIndex((i) => (i === index ? null : index))}
+                      aria-pressed={isSelected}
+                      aria-label={`${item.resellerName}, debe ${item.amountUsd.toFixed(2)} USD. ${isSelected ? "Mostrar opción para enviar mensaje" : "Seleccionar para enviar mensaje"}`}
+                    >
+                      <span className={`silva-home-debt-alerts__light silva-home-debt-alerts__light--${light}`} title={light === "red" ? "Hace 30+ días" : light === "yellow" ? "Hace 8–29 días" : "Hace menos de 8 días"} aria-hidden />
+                      <div className="silva-home-debt-alerts__body">
+                        <span className="silva-home-debt-alerts__name">{item.resellerName}</span>
+                        <span className="silva-home-debt-alerts__meta">
+                          Debe {item.amountUsd.toFixed(2)} USD
+                          {item.daysOwing > 0 && ` · hace ${item.daysOwing} ${item.daysOwing === 1 ? "día" : "días"}`}
+                        </span>
+                      </div>
+                      <strong className="silva-home-debt-alerts__amount">{item.amountUsd.toFixed(2)} USD</strong>
+                    </button>
+                    {isSelected && (
+                      <div className="silva-home-debt-alerts__float-wrap">
+                        <button
+                          type="button"
+                          className="silva-home-debt-alerts__float-btn"
+                          onClick={() => handleSendMessageToReseller(item)}
+                        >
+                          <MessageCircle size={18} aria-hidden />
+                          Enviar mensaje a {item.resellerName}
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="silva-helper silva-home-debt-alerts__empty">Sin deudas pendientes.</p>
+          )}
+        </Box>
+      )}
+
       <div className="silva-home-quick-row">
         <button type="button" className="silva-home-quick-btn" onClick={() => navigate("/inventory")}>
           <LordIcon name="stock" size={16} />
@@ -262,32 +355,75 @@ export function DashboardPage() {
       </div>
 
       <div className="silva-home-grid">
-        <Box className="silva-home-section">
-          <div className="silva-home-section__head">
-            <h3>Estado de stock</h3>
-            <span>{totalDevices} equipos</span>
-          </div>
-          {devicesByStateData.length ? (
-            <div className="silva-home-list">
-              {devicesByStateData.map((item) => {
-                const pct = totalDevices ? Math.round((item.value / totalDevices) * 100) : 0;
-                return (
-                  <div key={item.key} className="silva-home-list__item">
-                    <div className="silva-home-list__row">
-                      <span>{item.name}</span>
-                      <strong>{item.value}</strong>
-                    </div>
-                    <div className="silva-home-progress">
-                      <div style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="silva-helper">Sin datos de stock.</p>
-          )}
-        </Box>
+        {isAdmin && (() => {
+          const chartData = devicesByStateData.length > 0 ? devicesByStateData : FAKE_STOCK_CHART_DATA;
+          const chartTotal = chartData.reduce((acc, d) => acc + d.value, 0);
+          const darkColors = ["#7dd3fc", "#38bdf8", "#0ea5e9", "#0284c7", "#0369a1", "#0c4a6e"];
+          const lightColors = ["#0f766e", "#0d9488", "#14b8a6", "#2dd4bf", "#5eead4", "#99f6e4"];
+          const segmentColors = isDarkMode ? darkColors : lightColors;
+          return (
+            <Box className={`silva-home-section silva-home-chart-wrap ${isDarkMode ? "silva-home-chart-wrap--dark" : ""}`}>
+              <div className="silva-home-section__head">
+                <h3>Estado de stock</h3>
+                <span>{chartTotal} equipos</span>
+              </div>
+              <div className="silva-home-chart">
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                    <Pie
+                      data={chartData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={56}
+                      outerRadius={88}
+                      paddingAngle={2}
+                    >
+                      {chartData.map((_, index) => (
+                        <Cell
+                          key={index}
+                          fill={segmentColors[index % 6]}
+                          stroke={isDarkMode ? "#1e293b" : "#fff"}
+                          strokeWidth={1.5}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number, name: string) => {
+                        const pct = chartTotal > 0 ? ((value / chartTotal) * 100).toFixed(0) : "0";
+                        return [`${value} (${pct}%)`, name];
+                      }}
+                      contentStyle={{
+                        background: isDarkMode ? "#252525" : "#fff",
+                        border: isDarkMode ? "1px solid #2e2e2e" : "1px solid var(--silva-border)",
+                        borderRadius: "10px",
+                        fontSize: "12px"
+                      }}
+                      labelStyle={{ color: isDarkMode ? "#e4e5e7" : "var(--silva-text)" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <ul className="silva-home-stock-legend" aria-label="Leyenda estado de stock">
+                  {chartData.map((d, index) => {
+                    const pct = chartTotal > 0 ? ((d.value / chartTotal) * 100).toFixed(0) : "0";
+                    return (
+                      <li key={d.key} className="silva-home-stock-legend__item">
+                        <span
+                          className="silva-home-stock-legend__swatch"
+                          style={{ backgroundColor: segmentColors[index % 6] }}
+                          aria-hidden
+                        />
+                        <span className="silva-home-stock-legend__name">{d.name}</span>
+                        <span className="silva-home-stock-legend__pct">{pct}%</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </Box>
+          );
+        })()}
 
         <Box className="silva-home-section">
           <div className="silva-home-section__head">
@@ -310,68 +446,6 @@ export function DashboardPage() {
           )}
         </Box>
 
-        {isAdmin && debtByResellerData.length > 0 && (
-          <Box className="silva-home-section">
-            <div className="silva-home-section__head">
-              <h3>Top deuda por revendedor</h3>
-              <button type="button" onClick={() => navigate("/debts")}>
-                Abrir
-              </button>
-            </div>
-            <div className="silva-home-list">
-              {debtByResellerData.slice(0, 5).map((item) => (
-                <div key={item.resellerName} className="silva-home-list__item silva-home-list__item-inline">
-                  <span>{item.resellerName}</span>
-                  <strong>{(item.balanceCents / 100).toFixed(2)} USD</strong>
-                </div>
-              ))}
-            </div>
-          </Box>
-        )}
-
-        {isAdmin && consignmentsByStatusData.length > 0 && (
-          <Box className="silva-home-section">
-            <div className="silva-home-section__head">
-              <h3>Consignaciones</h3>
-              <button type="button" onClick={() => navigate("/consignments")}>
-                Abrir
-              </button>
-            </div>
-            <div className="silva-home-chip-grid">
-              {consignmentsByStatusData.map((item) => (
-                <div key={item.key} className="silva-home-chip">
-                  <span>{item.name}</span>
-                  <strong>{item.value}</strong>
-                </div>
-              ))}
-            </div>
-          </Box>
-        )}
-
-        {isAdmin && (
-          <Box className="silva-home-section">
-            <div className="silva-home-section__head">
-              <h3>Cumpleaños próximos (14 días)</h3>
-            </div>
-            {upcomingBirthdays.length ? (
-              <div className="silva-home-list">
-                {upcomingBirthdays.slice(0, 6).map((b) => (
-                  <div key={`${b.kind}-${b.id}`} className="silva-home-list__item silva-home-list__item-inline">
-                    <div>
-                      <div>{b.name}</div>
-                      <small className="silva-helper">
-                        {b.kind === "reseller" ? "Revendedor" : "Cliente"} · {new Date(b.birthday).toLocaleDateString()}
-                      </small>
-                    </div>
-                    <strong>{b.daysLeft}d</strong>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="silva-helper">No hay cumpleaños próximos.</p>
-            )}
-          </Box>
-        )}
       </div>
     </div>
   );

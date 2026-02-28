@@ -184,7 +184,9 @@ dashboardRouter.get("/", async (req, res) => {
     ]);
 
     const balances = await Promise.all(
-      resellersWithUser.map((r) => getDebtBalanceCents(r.id).then((c) => ({ resellerName: r.user.name, balanceCents: c })))
+      resellersWithUser.map((r) =>
+        getDebtBalanceCents(r.id).then((c) => ({ resellerId: r.id, resellerName: r.user.name, balanceCents: c }))
+      )
     );
     const totalDebtCents = balances.reduce((acc, n) => acc + n.balanceCents, 0);
 
