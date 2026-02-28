@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
-import { createUploadUrl, writeLocalObject } from "../services/storage.js";
+import { createUploadUrl, createReadUrl, writeLocalObject } from "../services/storage.js";
 
 const uploadRequestSchema = z.object({
   mimeType: z.string().min(1),
@@ -9,6 +9,21 @@ const uploadRequestSchema = z.object({
 });
 
 export const uploadsRouter = Router();
+
+uploadsRouter.get("/view", async (req, res) => {
+  const objectKey = typeof req.query.objectKey === "string" ? req.query.objectKey : "";
+  if (!objectKey) {
+    res.status(400).json({ error: "objectKey requerido" });
+    return;
+  }
+  try {
+    const url = await createReadUrl(objectKey);
+    res.redirect(302, url);
+  } catch {
+    res.status(404).json({ error: "No encontrado" });
+  }
+});
+
 uploadsRouter.use(requireAuth);
 
 uploadsRouter.post("/presign", async (req, res) => {
@@ -17,7 +32,7 @@ uploadsRouter.post("/presign", async (req, res) => {
   res.json(signed);
 });
 
-uploadsRouter.put("/local/*path", requireAuth, async (req, res) => {
+uploadsRouter.put("/local/*path", async (req, res) => {
   const objectKey = String(req.params.path ?? "");
   if (!objectKey) {
     res.status(400).json({ error: "Path requerido" });

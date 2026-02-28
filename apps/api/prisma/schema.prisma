@@ -46,6 +46,7 @@ model User {
   name           String
   role           Role
   createdAt      DateTime         @default(now())
+  lastSeenAt     DateTime?
   reseller       Reseller?
   sentMessages   ChatMessage[]    @relation("SentMessages")
   memberships    ChatMember[]

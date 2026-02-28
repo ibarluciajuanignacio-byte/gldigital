@@ -12,7 +12,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "db:sync": "prisma db push && prisma generate",
-    "stock:preload": "tsx src/scripts/preloadIncomingStock.ts"
+    "stock:preload": "tsx src/scripts/preloadIncomingStock.ts","seed:device-statuses":"tsx scripts/seed-device-statuses.ts","seed:admin":"tsx scripts/create-admin.ts","clear-business-data":"tsx scripts/clear-business-data.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.917.0",

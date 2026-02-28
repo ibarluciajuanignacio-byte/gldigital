@@ -14,7 +14,8 @@ chatRouter.get("/conversations", async (req, res) => {
       members: { include: { user: true } },
       messages: {
         orderBy: { createdAt: "desc" },
-        take: 1
+        take: 1,
+        include: { attachments: true }
       }
     },
     orderBy: { createdAt: "desc" }
@@ -134,27 +135,40 @@ chatRouter.post("/conversations", requireRole("admin"), async (req, res) => {
 
 chatRouter.get("/conversations/:id/messages", async (req, res) => {
   const conversationId = String(req.params.id);
-  const member = await prisma.chatMember.findUnique({
-    where: {
-      conversationId_userId: {
-        conversationId,
-        userId: req.user!.id
-      }
-    }
+  const limit = Math.min(Math.max(1, parseInt(String(req.query.limit), 10) || 50), 100);
+  const beforeId = typeof req.query.beforeId === "string" ? req.query.beforeId : undefined;
+
+  const conv = await prisma.chatConversation.findUnique({
+    where: { id: conversationId },
+    include: { members: { include: { user: true } } }
   });
+  if (!conv) {
+    res.status(404).json({ error: "Conversación no encontrada" });
+    return;
+  }
+  const member = conv.members.find((m) => m.userId === req.user!.id);
   if (!member) {
     res.status(403).json({ error: "No autorizado en esta conversación" });
     return;
   }
 
-  const messages = await prisma.chatMessage.findMany({
+  const raw = await prisma.chatMessage.findMany({
     where: { conversationId },
     include: { attachments: true, sender: true },
-    orderBy: { createdAt: "asc" },
-    take: 200
+    orderBy: { createdAt: "desc" },
+    take: limit + 1,
+    ...(beforeId ? { cursor: { id: beforeId }, skip: 1 } : {})
   });
+  const hasMore = raw.length > limit;
+  const messages = raw.slice(0, limit).reverse();
 
-  res.json({ messages });
+  let otherMemberLastReadMessageId: string | null = null;
+  if (conv.type === "dm") {
+    const other = conv.members.find((m) => m.userId !== req.user!.id);
+    if (other?.lastReadMessageId) otherMemberLastReadMessageId = other.lastReadMessageId;
+  }
+
+  res.json({ messages, otherMemberLastReadMessageId, hasMore });
 });
 
 chatRouter.post("/messages", async (req, res) => {
@@ -212,5 +226,8 @@ chatRouter.post("/conversations/:id/mark-read", async (req, res) => {
     where: { id: member.id },
     data: { lastReadMessageId }
   });
+  getIo()
+    .to(`conversation:${conversationId}`)
+    .emit("chat:read", { userId: req.user!.id, lastReadMessageId });
   res.json({ ok: true });
 });

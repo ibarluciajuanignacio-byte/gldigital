@@ -80,20 +80,35 @@ app.use((_req, res) => {
 
 // Manejo global de errores (incl. rechazos de promesas en rutas async con Express 5)
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const isPrisma = err instanceof Prisma.PrismaClientKnownRequestError;
-  const code = isPrisma ? (err as Prisma.PrismaClientKnownRequestError).code : null;
-  const status = code === "P2025" ? 404 : code === "P2002" ? 409 : 500;
-  const message =
-    code === "P2025"
-      ? "Registro no encontrado."
-      : code === "P2002"
-        ? "Ya existe un registro con ese valor (ej. IMEI duplicado)."
-        : process.env.NODE_ENV === "production"
-          ? "Error del servidor."
-          : err instanceof Error
-            ? err.message
-            : "Error del servidor.";
-  if (status === 500) {
+  const isPrismaKnown = err instanceof Prisma.PrismaClientKnownRequestError;
+  const isPrismaInit = err instanceof Prisma.PrismaClientInitializationError;
+  const code = isPrismaKnown ? (err as Prisma.PrismaClientKnownRequestError).code : null;
+  let status = code === "P2025" ? 404 : code === "P2002" ? 409 : 500;
+  let message: string;
+
+  if (isPrismaInit) {
+    status = 503;
+    message =
+      "No se pudo conectar a la base de datos. Revisá que MySQL esté corriendo y que DATABASE_URL en la API sea correcto.";
+  } else if (code === "P2025") {
+    message = "Registro no encontrado.";
+  } else if (code === "P2002") {
+    message = "Ya existe un registro con ese valor (ej. IMEI duplicado).";
+  } else if (code === "P2021") {
+    status = 503;
+    message =
+      "La tabla no existe en la base de datos. Ejecutá las migraciones: cd apps/api && npx prisma migrate deploy";
+  } else if (code === "P1001" || code === "P1002" || code === "P1017") {
+    status = 503;
+    message =
+      "No se puede conectar a la base de datos. Revisá que MySQL esté activo y que DATABASE_URL sea correcto.";
+  } else if (process.env.NODE_ENV === "production") {
+    message = "Error del servidor.";
+  } else {
+    message = err instanceof Error ? err.message : "Error del servidor.";
+  }
+
+  if (status >= 500) {
     console.error("[API] Error no controlado:", err);
   }
   res.status(status).json({ message });

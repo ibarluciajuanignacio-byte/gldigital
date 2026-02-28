@@ -94,51 +94,53 @@ export function PaymentsPage() {
         </Box>
       )}
 
-      <Box className="p-0 overflow-hidden">
-        <div className="silva-table-wrap">
-          <table className="silva-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Revendedor</th>
-                <th>Monto</th>
-                <th>Estado</th>
-                <th>Accion</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((payment) => (
-                <tr key={payment.id}>
-                  <td>{new Date(payment.createdAt).toLocaleString()}</td>
-                  <td>{payment.reseller.user.name}</td>
-                  <td>{(payment.amountCents / 100).toFixed(2)} USD</td>
-                  <td>{payment.status}</td>
-                  <td>
-                    {user?.role === "admin" && payment.status === "reported_pending" ? (
-                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          className="silva-btn silva-btn-primary"
-                          onClick={() => review(payment.id, "confirm")}
-                        >
-                          Confirmar
-                        </button>
-                        <button
-                          type="button"
-                          className="silva-btn silva-btn-danger"
-                          onClick={() => review(payment.id, "reject")}
-                        >
-                          Rechazar
-                        </button>
-                      </div>
-                    ) : (
-                      "-"
-                    )}
-                  </td>
+      <Box className="silva-card p-0 overflow-hidden">
+        <div className="silva-datatable">
+          <div className="silva-table-wrap">
+            <table className="silva-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Revendedor</th>
+                  <th>Monto</th>
+                  <th>Estado</th>
+                  <th>Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {payments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td data-label="Fecha">{new Date(payment.createdAt).toLocaleString()}</td>
+                    <td data-label="Revendedor">{payment.reseller.user.name}</td>
+                    <td data-label="Monto">{(payment.amountCents / 100).toFixed(2)} USD</td>
+                    <td data-label="Estado">{payment.status}</td>
+                    <td data-label="Acción">
+                      {user?.role === "admin" && payment.status === "reported_pending" ? (
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                          <button
+                            type="button"
+                            className="silva-btn silva-btn-primary"
+                            onClick={() => review(payment.id, "confirm")}
+                          >
+                            Confirmar
+                          </button>
+                          <button
+                            type="button"
+                            className="silva-btn silva-btn-danger"
+                            onClick={() => review(payment.id, "reject")}
+                          >
+                            Rechazar
+                          </button>
+                        </div>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </Box>
     </div>

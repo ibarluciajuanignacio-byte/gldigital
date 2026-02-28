@@ -33,25 +33,39 @@ type Props = {
   style?: CSSProperties;
 };
 
-/** Azul del proyecto (--silva-primary) para el color secundario de los Lordicons */
+/** Light: negro para la parte principal, azul para el acento */
+const LIGHT_PRIMARY = "#0B1014";
 const PROJECT_BLUE = "#033C57";
+/** Dark: blanco para la parte principal, azul para el acento */
+const DARK_PRIMARY = "#e4e5e7";
+const DARK_SECONDARY = "#2F7E9D";
+
+function isDarkMode(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.documentElement.getAttribute("data-theme") === "dark";
+}
 
 export function LordIcon({
   name,
   size = 24,
   trigger = "hover",
-  primary = "#0B1014",
-  secondary = PROJECT_BLUE,
+  primary,
+  secondary,
   className,
   style,
 }: Props) {
+  const dark = isDarkMode();
+  /* En light: siempre negro lo que no es azul. En dark: blanco lo que no es azul. */
+  const primaryColor = dark ? (primary ?? DARK_PRIMARY) : (primary ?? LIGHT_PRIMARY);
+  const secondaryColor = dark ? (secondary ?? DARK_SECONDARY) : (secondary ?? PROJECT_BLUE);
   const src = `/lordicons/${name}.json`;
-  const colors = `primary:${primary},secondary:${secondary}`;
+  const colors = `primary:${primaryColor},secondary:${secondaryColor}`;
   return createElement("lord-icon", {
+    key: dark ? "dark" : "light",
     src,
     trigger,
     colors,
     class: className ?? undefined,
     style: { width: size, height: size, ...style },
-  });
+  } as Record<string, unknown>);
 }

@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "../api/client";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
+import { DarkModeToggle } from "../components/DarkModeToggle";
 import { LordIcon, type LordIconName } from "../components/LordIcon";
+import { useDarkMode } from "../hooks/useDarkMode";
 import { isMobile } from "../utils/isMobile";
 import { getStoredAdminName, getStoredAdminAvatar } from "../utils/adminProfileStorage";
 
@@ -43,6 +45,7 @@ export function MainLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isDarkMode, setDarkMode] = useDarkMode();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileView, setIsMobileView] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false
@@ -103,14 +106,8 @@ export function MainLayout() {
     pageTitles[location.pathname] ??
     (location.pathname.startsWith("/cashboxes/") ? "Caja" : location.pathname.startsWith("/suppliers/") ? "Ficha de proveedor" : "GLdigital");
 
-  function isModule1Path(pathname: string): boolean {
-    if (pathname === "/" || pathname === "/inventory" || pathname === "/suppliers" || pathname.startsWith("/suppliers/") || pathname === "/consignments" || pathname === "/debts") return true;
-    if (pathname.startsWith("/purchases")) return true;
-    if (pathname === "/resellers" || pathname === "/resellers/map" || pathname.startsWith("/resellers/")) return true;
-    if (pathname === "/technicians") return true;
-    return false;
-  }
-  const isLockedPath = !isModule1Path(location.pathname);
+  /* Todas las rutas accesibles (candado de módulos desactivado) */
+  const isLockedPath = false;
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -329,14 +326,17 @@ export function MainLayout() {
               Hola, {user?.name ?? "Usuario"} · {user?.role ?? ""}
             </p>
           </div>
-          <button
-            type="button"
-            className="silva-mobile-menu-btn"
-            onClick={() => setMobileMoreOpen((prev) => !prev)}
-            aria-label="Abrir accesos"
-          >
-            <Menu size={18} />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <DarkModeToggle checked={isDarkMode} onChange={setDarkMode} />
+            <button
+              type="button"
+              className="silva-mobile-menu-btn"
+              onClick={() => setMobileMoreOpen((prev) => !prev)}
+              aria-label="Abrir accesos"
+            >
+              <Menu size={18} />
+            </button>
+          </div>
         </header>
 
         <div
@@ -791,8 +791,9 @@ export function MainLayout() {
             </button>
             <h1 className="silva-topbar__title">{currentTitle}</h1>
           </div>
-          <div className="silva-topbar__meta">
-            {user?.name ?? "Usuario"} - {user?.role ?? ""}
+          <div className="silva-topbar__meta" style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <DarkModeToggle checked={isDarkMode} onChange={setDarkMode} />
+            <span>{user?.name ?? "Usuario"} - {user?.role ?? ""}</span>
           </div>
         </header>
         <main className="silva-content">

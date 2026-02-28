@@ -10,6 +10,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Boldonse&family=Public+Sans:wght@300;400;500;600;700&family=Zalando+Sans+Expanded:wght@400;700&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <script>
+      (function () {
+        var stored = localStorage.getItem('gldigital-theme');
+        var dark = stored === 'dark' || (!stored && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script src="https://cdn.lordicon.com/ritcuqlt.js"></script>

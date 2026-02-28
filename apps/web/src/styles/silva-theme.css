@@ -574,13 +574,7 @@ body {
 /* Solo el listado (tabla o grid) tiene panel blanco con blur */
 .silva-stock-detail__panel {
   margin-top: 12px;
-  background: rgba(255, 255, 255, 0.58);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-radius: var(--silva-radius-lg);
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  padding: 0;
 }
 
 .silva-stock-detail-back {
@@ -1681,6 +1675,92 @@ button.silva-home-kpi-card--clickable:focus-visible {
   min-width: 0;
 }
 
+/* ========== DataTable responsive (estilo template: en móvil filas como cards) ========== */
+.silva-datatable {
+  overflow: visible;
+}
+
+.silva-datatable .silva-table {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .silva-datatable .silva-table-wrap {
+    overflow: visible;
+  }
+
+  .silva-datatable .silva-table,
+  .silva-datatable .silva-table thead,
+  .silva-datatable .silva-table tbody,
+  .silva-datatable .silva-table tr,
+  .silva-datatable .silva-table th,
+  .silva-datatable .silva-table td {
+    display: block;
+  }
+
+  .silva-datatable .silva-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  .silva-datatable .silva-table tr {
+    border: 1px solid var(--silva-border);
+    border-radius: var(--silva-radius);
+    margin-bottom: 12px;
+    padding: 12px;
+    background: var(--silva-card);
+    box-shadow: var(--silva-shadow-card);
+  }
+
+  .silva-datatable .silva-table tr:hover td {
+    background: transparent;
+  }
+
+  .silva-datatable .silva-table td {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--silva-border);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 0;
+  }
+
+  .silva-datatable .silva-table td:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .silva-datatable .silva-table td:first-child {
+    padding-top: 0;
+  }
+
+  .silva-datatable .silva-table td::before {
+    content: attr(data-label);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--silva-muted);
+    flex-shrink: 0;
+    min-width: 5.5rem;
+  }
+
+  .silva-datatable .silva-table td:last-child {
+    flex-wrap: wrap;
+  }
+
+  .silva-datatable .silva-table td:last-child::before {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+}
+
 .silva-badge {
   display: inline-flex;
   align-items: center;
@@ -2451,13 +2531,29 @@ button.silva-home-kpi-card--clickable:focus-visible {
   background: #f0f2f5;
 }
 
+.wa-chat-avatar-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
 .wa-chat-avatar {
   width: 44px;
   height: 44px;
   border-radius: 999px;
   object-fit: cover;
   border: 1px solid #d8dee5;
-  flex: 0 0 auto;
+  display: block;
+}
+
+.wa-chat-online-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #22c55e;
+  border: 2px solid #fff;
 }
 
 .wa-chat-content {
@@ -2506,6 +2602,17 @@ button.silva-home-kpi-card--clickable:focus-visible {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wa-chat-preview-thumb {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .wa-group-form {
@@ -2562,6 +2669,23 @@ button.silva-home-kpi-card--clickable:focus-visible {
   align-items: center;
   gap: 10px;
   padding: 0 14px;
+}
+
+.wa-main-back {
+  display: none;
+  border: 0;
+  background: none;
+  padding: 8px;
+  margin: 0 -8px 0 0;
+  color: #54656f;
+  cursor: pointer;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+}
+
+.wa-main-back:hover {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .wa-main-avatar {
@@ -2645,11 +2769,46 @@ button.silva-home-kpi-card--clickable:focus-visible {
   background: #fff;
 }
 
+.wa-message-attachment {
+  display: block;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  overflow: hidden;
+  max-width: 260px;
+}
+
+.wa-message-attachment img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  vertical-align: top;
+}
+
 .wa-message-meta {
   margin-top: 4px;
   color: #6f7a84;
   font-size: 0.7rem;
   text-align: right;
+}
+
+.wa-message-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.wa-message-ticks {
+  display: inline-flex;
+  color: #6f7a84;
+}
+
+.wa-tick-delivered {
+  color: #6f7a84;
+}
+
+.wa-tick-read {
+  color: #53bdeb;
 }
 
 .wa-attachment-banner {
@@ -2751,8 +2910,502 @@ button.silva-home-kpi-card--clickable:focus-visible {
   }
 }
 
+/* Mobile-first: una columna, lista o conversación a pantalla completa */
+@media (max-width: 768px) {
+  .wa-shell {
+    grid-template-columns: 1fr;
+    min-height: calc(100vh - 140px);
+    border-radius: 0;
+    border: 0;
+  }
+
+  .wa-sidebar {
+    max-height: none;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wa-main {
+    min-height: 0;
+    flex: 1;
+    display: none;
+    flex-direction: column;
+  }
+
+  .wa-shell.wa-shell--show-conversation .wa-sidebar {
+    display: none;
+  }
+
+  .wa-shell.wa-shell--show-conversation .wa-main {
+    display: flex;
+  }
+
+  .wa-main-back {
+    display: inline-flex;
+  }
+
+  .wa-chat-list {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .wa-message-bubble {
     max-width: 92%;
   }
+}
+
+/* ========== Dark mode toggle (header) ========== */
+.silva-darkmode-toggle-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+.silva-darkmode-toggle-input {
+  width: 0;
+  height: 0;
+  visibility: hidden;
+  position: absolute;
+}
+
+.silva-darkmode-toggle-label {
+  width: 52px;
+  height: 28px;
+  position: relative;
+  display: block;
+  background: #ebebeb;
+  border-radius: 28px;
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.25),
+    inset 0 -2px 8px rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.silva-darkmode-toggle-label::after {
+  content: "";
+  width: 22px;
+  height: 22px;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  background: linear-gradient(180deg, #ffcc89, #d8860b);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.silva-darkmode-toggle-label svg {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  top: 7px;
+  z-index: 10;
+  transition: fill 0.3s ease;
+}
+
+.silva-darkmode-toggle-label svg.sun {
+  left: 6px;
+  fill: #fff;
+}
+
+.silva-darkmode-toggle-label svg.moon {
+  left: 30px;
+  fill: #7e7e7e;
+}
+
+.silva-darkmode-toggle-input:checked + .silva-darkmode-toggle-label {
+  background: #242424;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.silva-darkmode-toggle-input:checked + .silva-darkmode-toggle-label::after {
+  left: 27px;
+  transform: translateX(-100%);
+  background: linear-gradient(180deg, #777, #3a3a3a);
+}
+
+.silva-darkmode-toggle-input:checked + .silva-darkmode-toggle-label svg.sun {
+  fill: #7e7e7e;
+}
+
+.silva-darkmode-toggle-input:checked + .silva-darkmode-toggle-label svg.moon {
+  fill: #fff;
+}
+
+/* ========== DARK MODE – tema profesional (estilo dashboard oscuro) ========== */
+html[data-theme="dark"] {
+  --silva-text: #e4e5e7;
+  --silva-muted: #9ca3af;
+  --silva-border: #2e2e2e;
+  --silva-bg: #1e1e1e;
+  --silva-card: #252525;
+  --silva-sidebar-bg: #171717;
+  --silva-sidebar-item: #e4e5e7;
+  --silva-primary-light: rgba(47, 126, 157, 0.2);
+  --silva-primary-border: rgba(47, 126, 157, 0.45);
+  --silva-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --silva-shadow-card: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+html[data-theme="dark"] body {
+  background: #1e1e1e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-shell {
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -15%, rgba(30, 30, 30, 0.6) 0%, transparent 48%),
+    linear-gradient(160deg, #0f172a 0%, #1e293b 42%, #0b2030 100%);
+}
+
+html[data-theme="dark"] .silva-sidebar {
+  background: #171717;
+  border-right-color: #2e2e2e;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="dark"] .silva-sidebar__brand,
+html[data-theme="dark"] .silva-sidebar__user,
+html[data-theme="dark"] .silva-sidebar__footer {
+  border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-sidebar__role {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-nav__title {
+  color: #6b7280;
+}
+
+html[data-theme="dark"] .silva-nav__link:hover {
+  background: rgba(47, 126, 157, 0.15);
+  color: #2F7E9D;
+}
+
+html[data-theme="dark"] .silva-nav__link.is-active {
+  background: rgba(47, 126, 157, 0.2);
+  color: #7dd3fc;
+  border-left: 3px solid #2F7E9D;
+}
+
+html[data-theme="dark"] .silva-main {
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -15%, rgba(30, 30, 30, 0.5) 0%, transparent 48%),
+    linear-gradient(160deg, #0f172a 0%, #1e293b 42%, #0b2030 100%);
+}
+
+html[data-theme="dark"] .silva-topbar {
+  background: #252525;
+  border-bottom-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-topbar__title {
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-topbar__meta {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-mobile-toggle {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-footer {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-card,
+html[data-theme="dark"] .silva-kpi-card,
+html[data-theme="dark"] .silva-home-kpi-card {
+  background: linear-gradient(180deg, #252525 0%, #1f1f1f 100%);
+  border-color: #2e2e2e;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+html[data-theme="dark"] .silva-page-header .silva-page-title,
+html[data-theme="dark"] .silva-page-header .silva-page-subtitle,
+html[data-theme="dark"] .silva-mobile-content .silva-stock-section-title__text,
+html[data-theme="dark"] .silva-content .silva-stock-section-title__text {
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-mobile-content .silva-stock-section-title__count,
+html[data-theme="dark"] .silva-content .silva-stock-section-title__count {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-stock-kpi-card,
+html[data-theme="dark"] .silva-stock-product-card,
+html[data-theme="dark"] .silva-stock-detail-summary,
+html[data-theme="dark"] .silva-stock-variant-card {
+  background: linear-gradient(180deg, #252525 0%, #222 100%);
+  border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-stock-kpi-card__label,
+html[data-theme="dark"] .silva-stock-product-card__variants,
+html[data-theme="dark"] .silva-stock-detail-summary__label,
+html[data-theme="dark"] .silva-stock-variant-card__subtitle {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-stock-tab {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-stock-tab:hover {
+  background: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-stock-tab.is-active {
+  background: #033C57;
+  border-color: #2F7E9D;
+  color: #fff;
+}
+
+html[data-theme="dark"] .silva-input,
+html[data-theme="dark"] .silva-select,
+html[data-theme="dark"] .silva-textarea {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-input:focus,
+html[data-theme="dark"] .silva-select:focus,
+html[data-theme="dark"] .silva-textarea:focus {
+  border-color: #2F7E9D;
+  box-shadow: 0 0 0 3px rgba(47, 126, 157, 0.25);
+}
+
+html[data-theme="dark"] .silva-btn {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-btn:hover {
+  background: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-label {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-modal {
+  background: #252525;
+  border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-modal-title {
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-modal-subtitle {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-table th {
+  color: #9ca3af;
+  border-bottom-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-table td {
+  border-bottom-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-table tr:hover td {
+  background: rgba(47, 126, 157, 0.08);
+}
+
+html[data-theme="dark"] .silva-home-info-bar {
+  background: linear-gradient(180deg, #2a2a2a 0%, #252525 50%, #222 100%);
+  border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-home-info-bar__title,
+html[data-theme="dark"] .silva-home-info-bar__value {
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-home-info-bar__meta,
+html[data-theme="dark"] .silva-home-hero__eyebrow {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-home-hero__item,
+html[data-theme="dark"] .silva-home-hero__dollar-card,
+html[data-theme="dark"] .silva-home-list__item {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-home-list__item span,
+html[data-theme="dark"] .silva-home-hero__item span {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-home-quick-btn {
+  background: linear-gradient(180deg, #252525 0%, #1f1f1f 100%);
+  border-color: rgba(47, 126, 157, 0.45);
+  color: #e4e5e7;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+html[data-theme="dark"] .silva-home-quick-btn:hover {
+  background: linear-gradient(180deg, rgba(47, 126, 157, 0.25) 0%, rgba(47, 126, 157, 0.12) 100%);
+  border-color: #2F7E9D;
+  color: #7dd3fc;
+  box-shadow: 0 2px 12px rgba(47, 126, 157, 0.2);
+}
+
+html[data-theme="dark"] .silva-home-quick-btn svg:last-child {
+  opacity: 0.9;
+  color: inherit;
+}
+
+html[data-theme="dark"] .silva-card.silva-home-section {
+  background: rgba(37, 37, 37, 0.7);
+  border-color: #2e2e2e;
+  backdrop-filter: blur(24px);
+}
+
+html[data-theme="dark"] .silva-chat-list,
+html[data-theme="dark"] .silva-chat-content,
+html[data-theme="dark"] .silva-chat-item {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-chat-item.is-active {
+  background: rgba(47, 126, 157, 0.2);
+  border-color: #2F7E9D;
+}
+
+html[data-theme="dark"] .silva-chat-messages {
+  background: #1e1e1e;
+}
+
+html[data-theme="dark"] .silva-chat-bubble {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-chat-bubble.mine {
+  background: rgba(47, 126, 157, 0.25);
+  border-color: #2F7E9D;
+}
+
+html[data-theme="dark"] .silva-mobile-topbar {
+  background: linear-gradient(180deg, #252525 0%, #222 100%);
+  border-bottom-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-mobile-title,
+html[data-theme="dark"] .silva-mobile-subtitle {
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-mobile-more {
+  background: #252525;
+  border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-mobile-more__item {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-mobile-more__item.is-active {
+  background: rgba(47, 126, 157, 0.2);
+  border-color: #2F7E9D;
+  color: #7dd3fc;
+}
+
+html[data-theme="dark"] .silva-mobile-bottombar-bar {
+  background: linear-gradient(180deg, rgba(37, 37, 37, 0.9) 0%, rgba(30, 30, 30, 0.95) 100%);
+  border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .silva-mobile-tab.is-active {
+  color: #7dd3fc;
+}
+
+html[data-theme="dark"] .silva-mobile-tab.is-active .silva-mobile-tab__icon {
+  background: rgba(47, 126, 157, 0.3);
+  color: #7dd3fc;
+}
+
+html[data-theme="dark"] .silva-mobile-shell {
+  background:
+    radial-gradient(ellipse 120% 70% at 50% -15%, rgba(30, 30, 30, 0.6) 0%, transparent 48%),
+    linear-gradient(160deg, #0f172a 0%, #1e293b 42%, #0b2030 100%);
+}
+
+html[data-theme="dark"] .silva-mobile-shell::after {
+  background: rgba(30, 30, 30, 0.85);
+}
+
+html[data-theme="dark"] .silva-overlay.is-open {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+html[data-theme="dark"] .wa-shell {
+  background: #252525;
+  border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .wa-sidebar-top,
+html[data-theme="dark"] .wa-main-header,
+html[data-theme="dark"] .wa-inputbar {
+  background: #1f1f1f;
+  border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .wa-chat-item {
+  background: #252525;
+  border-color: #2e2e2e;
+}
+
+html[data-theme="dark"] .wa-chat-item:hover {
+  background: #2e2e2e;
+}
+
+html[data-theme="dark"] .wa-message-bubble.theirs {
+  background: #252525;
+  border-color: #2e2e2e;
+  color: #e4e5e7;
+}
+
+html[data-theme="dark"] .silva-stock-detail-back {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .silva-stock-detail-back:hover {
+  color: #7dd3fc;
+}
+
+html[data-theme="dark"] .silva-stock-detail-title,
+html[data-theme="dark"] .silva-stock-detail-summary__value,
+html[data-theme="dark"] .silva-stock-product-card__name {
+  color: #e4e5e7;
+}
+
+/* Inicializar data-theme al cargar (evitar flash) */
+html:not([data-theme]) {
+  /* Si no hay data-theme, el light es el por defecto (no hace falta definir) */
 }
