@@ -2249,7 +2249,8 @@ html[data-theme="dark"] .silva-home-stock-legend__pct {
   letter-spacing: 1.2px;
 }
 .silva-cal-screen {
-  width: 403px;
+  width: 100%;
+  max-width: 403px;
   height: 88px;
   margin: 12px auto 28px;
   padding: 14px 19px;
@@ -2264,41 +2265,66 @@ html[data-theme="dark"] .silva-home-stock-legend__pct {
   background: linear-gradient(to bottom, #3e3e3e 0%, #303030 100%);
   box-sizing: border-box;
 }
+/* Grid 4 columnas: sin columna vacía; fila 5 = 0(ancho) . = */
 .silva-cal-buttons {
   padding: 0;
-  width: 403px;
   margin: 0 auto;
-  overflow: hidden;
   list-style: none;
-}
-.silva-cal-buttons::after {
-  content: "";
-  display: table;
-  clear: both;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(5, 56px);
+  gap: 8px;
+  width: 100%;
+  max-width: 403px;
+  box-sizing: border-box;
 }
 .silva-cal-buttons li {
-  float: left;
   padding: 0;
-  margin: 0 12px 9px 0;
-  display: block;
+  margin: 0;
+  display: flex;
 }
-.silva-cal-buttons li:nth-child(4n) { margin-right: 0; }
+/* Fila 1: C % ± ÷ */
+.silva-cal-buttons li:nth-child(1) { grid-column: 1; grid-row: 1; }
+.silva-cal-buttons li:nth-child(2) { grid-column: 2; grid-row: 1; }
+.silva-cal-buttons li:nth-child(3) { grid-column: 3; grid-row: 1; }
+.silva-cal-buttons li:nth-child(4) { grid-column: 4; grid-row: 1; }
+/* Fila 2: 7 8 9 × */
+.silva-cal-buttons li:nth-child(5) { grid-column: 1; grid-row: 2; }
+.silva-cal-buttons li:nth-child(6) { grid-column: 2; grid-row: 2; }
+.silva-cal-buttons li:nth-child(7) { grid-column: 3; grid-row: 2; }
+.silva-cal-buttons li:nth-child(8) { grid-column: 4; grid-row: 2; }
+/* Fila 3: 4 5 6 − */
+.silva-cal-buttons li:nth-child(9) { grid-column: 1; grid-row: 3; }
+.silva-cal-buttons li:nth-child(10) { grid-column: 2; grid-row: 3; }
+.silva-cal-buttons li:nth-child(11) { grid-column: 3; grid-row: 3; }
+.silva-cal-buttons li:nth-child(12) { grid-column: 4; grid-row: 3; }
+/* Fila 4: 1 2 3 + */
+.silva-cal-buttons li:nth-child(13) { grid-column: 1; grid-row: 4; }
+.silva-cal-buttons li:nth-child(14) { grid-column: 2; grid-row: 4; }
+.silva-cal-buttons li:nth-child(15) { grid-column: 3; grid-row: 4; }
+.silva-cal-buttons li:nth-child(16) { grid-column: 4; grid-row: 4; }
+/* Fila 5: 0(ancho) . = */
+.silva-cal-buttons li.silva-cal-buttons__wide { grid-column: 1 / span 2; grid-row: 5; }
+.silva-cal-buttons li:nth-child(18) { grid-column: 3; grid-row: 5; }
+.silva-cal-buttons li:nth-child(19) { grid-column: 4; grid-row: 5; }
 .silva-cal-btn {
-  display: block;
-  width: 90px;
-  height: 65px;
-  padding: 17px 0 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
   color: #c0c0c0;
   font-family: inherit;
-  font-size: 1.52em;
+  font-size: 1.4em;
   font-weight: 500;
-  letter-spacing: -2px;
+  letter-spacing: -1px;
   background-color: #2f2f2f;
   border: 1px solid #000;
-  border-radius: 5px;
+  border-radius: 8px;
   text-align: center;
   text-decoration: none;
-  line-height: 1;
   text-shadow: 0 -1px 0 #000;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -2px 2px rgba(0, 0, 0, 0.2);
   background-image: linear-gradient(to bottom, #363636 0%, #313234 40%, #2f2f2f 100%);
@@ -2310,9 +2336,88 @@ html[data-theme="dark"] .silva-home-stock-legend__pct {
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
   background-image: linear-gradient(to bottom, #2f2f2f 0%, #363636 100%);
 }
-.silva-cal-btn--tall { height: 143px !important; padding-top: 0; padding-bottom: 0; }
-.silva-cal-btn--wide { width: 195px !important; }
-.silva-cal-btn--shift { margin-top: -74px; }
+.silva-cal-btn--op {
+  background-color: #3a3a3a;
+  color: #e0e0e0;
+}
+
+.silva-cal-history {
+  margin-top: 12px;
+  padding: 0 12px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.silva-cal-history__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+.silva-cal-history__title {
+  font-size: 0.7rem;
+  color: #888;
+  letter-spacing: 0.5px;
+}
+.silva-cal-history__nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.silva-cal-history__arrow {
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #c0c0c0;
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.silva-cal-history__arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+}
+.silva-cal-history__arrow:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.silva-cal-history__counter {
+  font-size: 0.7rem;
+  color: #888;
+  min-width: 2.5rem;
+  text-align: center;
+}
+.silva-cal-history__slide {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c0c0c0;
+  font-size: 0.8rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.silva-cal-history__slide:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.silva-cal-history__expr {
+  display: block;
+  color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.silva-cal-history__result {
+  display: block;
+  font-weight: 600;
+  color: #e0e0e0;
+}
 
 .silva-modal-title {
   margin: 0 0 4px;
@@ -3677,23 +3782,6 @@ html[data-theme="dark"] .silva-home-stock-legend__pct {
 .silva-route-preloader__orbit--inner .silva-route-preloader__electron:nth-child(3) { --angle: 240deg; }
 .silva-route-preloader__orbit--outer .silva-route-preloader__electron:nth-child(1) { --angle: 0deg; }
 .silva-route-preloader__orbit--outer .silva-route-preloader__electron:nth-child(2) { --angle: 180deg; }
-
-/* Logo G como núcleo del átomo */
-.silva-route-preloader__logo {
-  position: relative;
-  z-index: 2;
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  opacity: 0.94;
-  mix-blend-mode: lighten;
-  animation: silva-preloader-nucleus 2.5s ease-in-out infinite;
-}
-
-@keyframes silva-preloader-nucleus {
-  0%, 100% { opacity: 0.9; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.03); }
-}
 
 /* ========== DARK MODE – tema profesional (estilo dashboard oscuro) ========== */
 html[data-theme="dark"] {

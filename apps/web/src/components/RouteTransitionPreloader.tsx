@@ -52,11 +52,6 @@ export function RouteTransitionPreloader() {
           <span className="silva-route-preloader__electron" style={{ "--angle": "0deg" } as React.CSSProperties} />
           <span className="silva-route-preloader__electron" style={{ "--angle": "180deg" } as React.CSSProperties} />
         </div>
-        <img
-          src="/EngineeredBigLigas.png"
-          alt=""
-          className="silva-route-preloader__logo"
-        />
       </div>
     </div>
   );
