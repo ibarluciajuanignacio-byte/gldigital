@@ -72,7 +72,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "public");
 if (process.env.NODE_ENV === "production" && fs.existsSync(path.join(publicDir, "index.html"))) {
   app.use(express.static(publicDir));
-  app.get("*", (_req, res) => res.sendFile(path.join(publicDir, "index.html")));
+  // Express 5: el comodín debe tener nombre (path-to-regexp)
+  app.get("/{*splat}", (_req, res) => res.sendFile(path.join(publicDir, "index.html")));
 }
 
 // Ruta no encontrada
