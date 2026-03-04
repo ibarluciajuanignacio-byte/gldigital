@@ -1375,7 +1375,7 @@ export function InventoryPage() {
                         className="silva-input"
                         value={manualLoadForm.description}
                         onChange={(e) => setManualLoadForm((p) => ({ ...p, description: e.target.value }))}
-                        placeholder="Ej. iPad Pro 11\", iPad Air"
+                        placeholder="Ej. iPad Pro 11, iPad Air"
                       />
                     </div>
                     <div className="silva-col-12">
