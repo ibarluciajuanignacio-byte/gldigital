@@ -10,18 +10,23 @@ import { getDebtBalanceCents } from "../services/ledger.js";
 export const resellersRouter = Router();
 resellersRouter.use(requireAuth);
 
+/** "Varios" es un revendedor interno para tareas/encargues sin persona asignada; no se muestra en la lista. */
+const NOT_LISTED_RESELLER_NAME = "Varios";
+
 resellersRouter.get("/", requireRole("admin"), async (_req, res) => {
   const { skip, take, page, pageSize } = parsePagination(
     _req.query as Record<string, string | string[]>
   );
+  const whereNotVarios = { user: { name: { not: NOT_LISTED_RESELLER_NAME } } };
   const [resellers, total] = await Promise.all([
     prisma.reseller.findMany({
+      where: whereNotVarios,
       include: { user: true },
       orderBy: { createdAt: "desc" },
       skip,
       take
     }),
-    prisma.reseller.count()
+    prisma.reseller.count({ where: whereNotVarios })
   ]);
   const withSummary = await Promise.all(
     resellers.map(async (r) => {
@@ -193,6 +198,10 @@ resellersRouter.delete("/:id", requireRole("admin"), async (req, res) => {
   });
   if (!reseller) {
     res.status(404).json({ error: "Revendedor no encontrado" });
+    return;
+  }
+  if (reseller.user.name === NOT_LISTED_RESELLER_NAME) {
+    res.status(400).json({ error: "No se puede eliminar el revendedor Varios." });
     return;
   }
   const userId = reseller.userId;

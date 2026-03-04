@@ -1,8 +1,9 @@
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { useAuth } from "../state/auth";
 import { Box } from "../components/Box";
+import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
 import { deviceDisplayLabel } from "../utils/deviceLabel";
 
 type Consignment = {
@@ -28,6 +29,16 @@ export function ConsignmentsPage() {
   const [sellError, setSellError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [imeiScannerOpen, setImeiScannerOpen] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const availableDevices = useMemo(() => {
+    const byId = new Map<string, Device>();
+    for (const d of devices) {
+      if (d.state === "available" && !byId.has(d.id)) byId.set(d.id, d);
+    }
+    return Array.from(byId.values());
+  }, [devices]);
 
   async function load() {
     setLoadError(null);
@@ -76,6 +87,17 @@ export function ConsignmentsPage() {
     setSellError(null);
   }
 
+  function handleImeiScanned(digits: string) {
+    setImeiScannerOpen(false);
+    setScanError(null);
+    const found = availableDevices.find((d) => d.imei === digits || d.imei.replace(/\D/g, "") === digits);
+    if (found) {
+      setForm((p) => ({ ...p, deviceId: found.id }));
+    } else {
+      setScanError(`No se encontró un equipo disponible con IMEI ${digits}. Verificá que esté en estado disponible o actualizá la lista.`);
+    }
+  }
+
   async function confirmMarkSold(e: FormEvent) {
     e.preventDefault();
     if (!sellModal) return;
@@ -113,23 +135,35 @@ export function ConsignmentsPage() {
           {assignError && (
             <div className="silva-alert" style={{ marginBottom: 12 }} role="alert">{assignError}</div>
           )}
+          {scanError && (
+            <div className="silva-alert" style={{ marginBottom: 12 }} role="alert">{scanError}</div>
+          )}
           <form onSubmit={assign} className="silva-form-grid">
             <div className="silva-col-4">
               <label className="silva-label">Equipo</label>
-              <select
-                className="silva-select"
-                value={form.deviceId}
-                onChange={(e) => setForm((p) => ({ ...p, deviceId: e.target.value }))}
-              >
-                <option value="">Seleccionar</option>
-                {devices
-                  .filter((d) => d.state === "available")
-                  .map((d) => (
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <select
+                  className="silva-select"
+                  value={form.deviceId}
+                  onChange={(e) => setForm((p) => ({ ...p, deviceId: e.target.value }))}
+                  style={{ flex: "1 1 200px" }}
+                >
+                  <option value="">Seleccionar</option>
+                  {availableDevices.map((d) => (
                     <option key={d.id} value={d.id}>
                       {deviceDisplayLabel(d)} - {d.imei}
                     </option>
                   ))}
-              </select>
+                </select>
+                <button
+                  type="button"
+                  className="silva-btn silva-btn-ghost"
+                  onClick={() => { setScanError(null); setImeiScannerOpen(true); }}
+                  title="Escanear IMEI para elegir el equipo más rápido"
+                >
+                  Escanear IMEI
+                </button>
+              </div>
             </div>
             <div className="silva-col-4">
               <label className="silva-label">Revendedor</label>
@@ -189,6 +223,14 @@ export function ConsignmentsPage() {
           </table>
         </div>
       </Box>
+
+      {imeiScannerOpen && (
+        <ImeiBarcodeScannerModal
+          open={imeiScannerOpen}
+          onClose={() => setImeiScannerOpen(false)}
+          onScan={handleImeiScanned}
+        />
+      )}
 
       {/* Modal: ingresar monto de venta al marcar vendido */}
       {sellModal && (

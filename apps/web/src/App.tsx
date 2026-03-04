@@ -20,6 +20,10 @@ import { CashboxDetailPage } from "./pages/CashboxDetailPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TechniciansPage } from "./pages/TechniciansPage";
 import { LoginPage } from "./pages/LoginPage";
+import { NotesPage } from "./pages/NotesPage";
+import { NoteImportDetailPage } from "./pages/NoteImportDetailPage";
+import { NotesCleanupPage } from "./pages/NotesCleanupPage";
+import { TasksHistoryPage } from "./pages/TasksHistoryPage";
 
 function App() {
   return (
@@ -43,6 +47,11 @@ function App() {
           <Route path="/cashboxes" element={<CashboxesPage />} />
           <Route path="/cashboxes/:id" element={<CashboxDetailPage />} />
           <Route path="/chat" element={<ChatPage />} />
+          <Route path="/notes" element={<NotesPage />} />
+          <Route path="/notes/cleanup" element={<NotesCleanupPage />} />
+          <Route path="/notes/tasks-history" element={<TasksHistoryPage />} />
+          <Route path="/notes/:id" element={<NoteImportDetailPage />} />
+          <Route path="/tasks/history" element={<Navigate to="/notes/tasks-history" replace />} />
           <Route path="/technicians" element={<TechniciansPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

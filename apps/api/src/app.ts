@@ -25,6 +25,7 @@ import { techniciansRouter } from "./routes/technicians.js";
 import { repairRecordsRouter } from "./routes/repair-records.js";
 import { catalogRouter } from "./routes/catalog.js";
 import { cashboxesRouter } from "./routes/cashboxes.js";
+import { notesRouter } from "./routes/notes.js";
 import { getLocalStorageRoot } from "./services/storage.js";
 
 export const app = express();
@@ -64,6 +65,7 @@ app.use("/technicians", techniciansRouter);
 app.use("/repair-records", repairRecordsRouter);
 app.use("/catalog", catalogRouter);
 app.use("/cashboxes", cashboxesRouter);
+app.use("/notes", notesRouter);
 
 // En producción: servir el frontend (mismo origen = una sola URL para todo)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

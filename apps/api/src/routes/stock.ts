@@ -97,6 +97,28 @@ stockRouter.get("/requests", async (req, res) => {
   res.json({ requests });
 });
 
+/** Historial de tareas/encargues realizados (registro con fecha de creación y de cierre). Solo admin. */
+stockRouter.get("/requests/completed", requireRole("admin"), async (_req, res) => {
+  const list = await prisma.stockRequest.findMany({
+    where: { status: "completed" },
+    orderBy: { resolvedAt: "desc" },
+    take: 200,
+    include: { reseller: { select: { user: { select: { name: true } } } } }
+  });
+  res.json({
+    completed: list.map((r) => ({
+      id: r.id,
+      title: r.title,
+      note: r.note,
+      quantity: r.quantity,
+      resellerName: r.reseller.user.name,
+      createdAt: r.createdAt.toISOString(),
+      resolvedAt: r.resolvedAt?.toISOString() ?? null,
+      resolvedNote: r.resolvedNote ?? null
+    }))
+  });
+});
+
 stockRouter.post("/requests", requireRole("reseller", "admin"), async (req, res) => {
   const parsed = z
     .object({
@@ -151,10 +173,62 @@ stockRouter.post("/requests", requireRole("reseller", "admin"), async (req, res)
   res.status(201).json({ request: created });
 });
 
+/** Editar tarea (solo admin): pendiente o realizada (en realizada se puede editar también resolvedNote). */
+stockRouter.patch("/requests/:id", requireRole("admin"), async (req, res) => {
+  const id = String(req.params.id);
+  const parsed = z
+    .object({
+      resellerId: z.string().uuid().optional(),
+      resellerName: z.string().trim().min(1).max(200).optional(),
+      title: z.string().trim().min(1).max(500).optional(),
+      note: z.string().trim().max(2000).optional(),
+      quantity: z.number().int().min(1).max(500).optional(),
+      resolvedNote: z.string().trim().max(2000).optional()
+    })
+    .safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: "Datos inválidos." });
+    return;
+  }
+  const existing = await prisma.stockRequest.findUnique({ where: { id } });
+  if (!existing) {
+    res.status(404).json({ message: "Solicitud no encontrada." });
+    return;
+  }
+  if (existing.status !== "pending_approval" && existing.status !== "completed") {
+    res.status(400).json({ message: "Solo se pueden editar tareas pendientes o realizadas." });
+    return;
+  }
+  const data: { resellerId?: string; title?: string; note?: string | null; quantity?: number; resolvedNote?: string | null } = {};
+  if (parsed.data.resellerName !== undefined) {
+    const byName = await prisma.reseller.findFirst({
+      where: { user: { name: parsed.data.resellerName } }
+    });
+    if (!byName) {
+      res.status(400).json({ message: "No se encontró un revendedor con ese nombre." });
+      return;
+    }
+    data.resellerId = byName.id;
+  } else if (parsed.data.resellerId !== undefined) {
+    data.resellerId = parsed.data.resellerId;
+  }
+  if (parsed.data.title !== undefined) data.title = parsed.data.title;
+  if (parsed.data.note !== undefined) data.note = parsed.data.note || null;
+  if (parsed.data.quantity !== undefined) data.quantity = parsed.data.quantity;
+  if (existing.status === "completed" && parsed.data.resolvedNote !== undefined) data.resolvedNote = parsed.data.resolvedNote || null;
+  const updated = await prisma.stockRequest.update({
+    where: { id },
+    data,
+    include: { reseller: { include: { user: true } } }
+  });
+  res.json({ request: updated });
+});
+
 stockRouter.post("/requests/:id/status", requireRole("admin"), async (req, res) => {
   const parsed = z
     .object({
-      status: z.enum(["pending_approval", "approved", "rejected", "cancelled"])
+      status: z.enum(["pending_approval", "approved", "rejected", "cancelled", "completed"]),
+      resolvedNote: z.string().trim().max(2000).optional()
     })
     .safeParse(req.body);
   if (!parsed.success) {
@@ -162,22 +236,37 @@ stockRouter.post("/requests/:id/status", requireRole("admin"), async (req, res) 
     return;
   }
   const requestId = String(req.params.id);
+  const data: { status: string; resolvedAt: Date | null; resolvedById: string | null; resolvedNote?: string | null } = {
+    status: parsed.data.status,
+    resolvedAt: parsed.data.status === "pending_approval" ? null : new Date(),
+    resolvedById: parsed.data.status === "pending_approval" ? null : req.user!.id
+  };
+  if (parsed.data.status === "completed" && parsed.data.resolvedNote !== undefined) {
+    data.resolvedNote = parsed.data.resolvedNote || null;
+  }
   const updated = await prisma.stockRequest.update({
     where: { id: requestId },
-    data: {
-      status: parsed.data.status,
-      resolvedAt: parsed.data.status === "pending_approval" ? null : new Date(),
-      resolvedById: parsed.data.status === "pending_approval" ? null : req.user!.id
-    },
+    data,
     include: { reseller: { include: { user: true } } }
   });
 
+  const statusLabel =
+    parsed.data.status === "completed"
+      ? "realizada"
+      : parsed.data.status === "cancelled"
+        ? "cancelada"
+        : parsed.data.status;
   await prisma.notification.create({
     data: {
       userId: updated.reseller.userId,
       type: "stock_request_status",
       title: "Actualización de solicitud",
-      body: `Tu solicitud "${updated.title}" fue marcada como ${updated.status}.`
+      body:
+        parsed.data.status === "completed"
+          ? `Tu tarea "${updated.title}" fue marcada como realizada.`
+          : parsed.data.status === "cancelled"
+            ? `La tarea "${updated.title}" fue eliminada del listado.`
+            : `Tu solicitud "${updated.title}" fue marcada como ${statusLabel}.`
     }
   });
 

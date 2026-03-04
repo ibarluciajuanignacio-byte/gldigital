@@ -36,7 +36,8 @@ const receiveByImeiSchema = z.object({
   model: z.string().trim().optional(),
   color: z.string().trim().optional(),
   memory: z.string().trim().optional(),
-  condition: z.enum(["sealed", "used"]).default("sealed")
+  condition: z.enum(["sealed", "used", "used_a", "used_ab"]).default("sealed"),
+  location: z.string().trim().min(1).optional().nullable()
 });
 
 // Unidades pendientes de escanear (órdenes de compra con quantityReceived < quantityExpected)
@@ -116,7 +117,7 @@ purchasesRouter.post("/receive-by-imei", async (req, res) => {
   const deviceColor = parsed.data.color ?? item.color ?? null;
 
   const device = await prisma.$transaction(async (tx) => {
-    const isSealed = parsed.data.condition === "sealed";
+    const isSealed = parsed.data.condition === "sealed"; // used, used_a, used_ab → no battery/warranty defaults
     const d = await tx.device.create({
       data: {
         imei,
@@ -129,6 +130,7 @@ purchasesRouter.post("/receive-by-imei", async (req, res) => {
         sourceType: "purchase",
         purchaseOrderItemId: item.id,
         costCents: unitCostCents,
+        location: parsed.data.location && parsed.data.location.trim() ? parsed.data.location.trim() : null,
         ...(isSealed && {
           batteryHealth: 100,
           batteryCycles: 0,

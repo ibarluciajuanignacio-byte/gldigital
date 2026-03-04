@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../state/auth";
-import { LogOut, Menu, X, Plus, Barcode, Settings, ChevronLeft, ChevronRight, Calculator } from "lucide-react";
+import { LogOut, Menu, X, Plus, Barcode, Settings, ChevronLeft, ChevronRight, Calculator, FileText, History } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { api } from "../api/client";
@@ -9,6 +9,7 @@ import { DarkModeToggle } from "../components/DarkModeToggle";
 import { LordIcon, type LordIconName } from "../components/LordIcon";
 import { RouteTransitionPreloader } from "../components/RouteTransitionPreloader";
 import { CalculatorModal } from "../components/CalculatorModal";
+import { AddNoteModal } from "../components/AddNoteModal";
 import { ThemeProvider } from "../context/ThemeContext";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { isMobile } from "../utils/isMobile";
@@ -19,6 +20,9 @@ type NavLinkItem = {
   label: string;
   lordIcon?: LordIconName;
   icon?: React.ComponentType<{ size?: number }>;
+  adminOnly?: boolean;
+  /** Agrupa bajo otra sección (ej. "notes" = bajo Notas) */
+  parent?: string;
 };
 
 const links: NavLinkItem[] = [
@@ -34,6 +38,8 @@ const links: NavLinkItem[] = [
   { to: "/payments", label: "Pagos", lordIcon: "caja" },
   { to: "/cashboxes", label: "Cajas", lordIcon: "caja" },
   { to: "/chat", label: "Chat", lordIcon: "chat" },
+  { to: "/notes", label: "Notas", icon: FileText, adminOnly: true },
+  { to: "/notes/tasks-history", label: "Historial de tareas", icon: History, adminOnly: true, parent: "notes" },
   { to: "/technicians", label: "Técnicos", lordIcon: "tecnicios" },
   { to: "/settings", label: "Configuración", icon: Settings },
 ];
@@ -59,7 +65,7 @@ export function MainLayout() {
     try { return localStorage.getItem("gldigital-sidebar-collapsed") === "1"; } catch { return false; }
   });
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
-  const [quickModal, setQuickModal] = useState<"payment" | "debt" | "request" | "stock" | "calculator" | null>(null);
+  const [quickModal, setQuickModal] = useState<"payment" | "debt" | "request" | "stock" | "calculator" | "note" | null>(null);
   const [quickError, setQuickError] = useState<string | null>(null);
 
   const [resellers, setResellers] = useState<Array<{ id: string; user: { name: string } }>>([]);
@@ -106,6 +112,8 @@ export function MainLayout() {
     "/payments": "Pagos",
     "/cashboxes": "Cajas",
     "/chat": "Chat",
+    "/notes": "Notas",
+    "/notes/tasks-history": "Historial de tareas",
     "/technicians": "Técnicos",
     "/settings": "Configuración",
   };
@@ -153,7 +161,7 @@ export function MainLayout() {
     return data.resellers ?? [];
   }
 
-  async function openQuickModal(type: "payment" | "debt" | "request" | "stock" | "calculator") {
+  async function openQuickModal(type: "payment" | "debt" | "request" | "stock" | "calculator" | "note") {
     setQuickError(null);
     setIsQuickMenuOpen(false);
     setQuickModal(type);
@@ -306,7 +314,7 @@ export function MainLayout() {
     { to: "/chat", label: "Chat", lordIcon: "chat" }
   ];
 
-  /* Acciones rápidas FAB: Calculadora, Compra, Movimientos, Cajas; apiladas arriba del FAB para no solaparse (ancho botón 118px → centrado con x -59) */
+  /* Acciones rápidas FAB: 1 arriba centrado, 2 a la izquierda, 2 a la derecha (menos apilado) */
   const mobileQuickActions: Array<{
     key: string;
     label: string;
@@ -316,12 +324,15 @@ export function MainLayout() {
     y: number;
     action: "navigate" | "modal";
     to?: string;
-    modal?: "debt" | "calculator";
+    modal?: "debt" | "calculator" | "note";
   }> = [
-    { key: "calculator", label: "Calculadora", icon: Calculator, x: -59, y: -225, action: "modal", modal: "calculator" },
-    { key: "purchase", label: "Compra", lordIcon: "orden_compra", x: -59, y: -165, action: "navigate", to: "/purchases" },
-    { key: "movements", label: "Movimientos", lordIcon: "deuda", x: -59, y: -105, action: "modal", modal: "debt" },
-    { key: "cashboxes", label: "Cajas", lordIcon: "caja", x: -59, y: -45, action: "navigate", to: "/cashboxes" }
+    ...(user?.role === "admin"
+      ? [{ key: "note", label: "Agregar nota", icon: FileText, x: -59, y: -300, action: "modal" as const, modal: "note" as const }]
+      : []),
+    { key: "calculator", label: "Calculadora", icon: Calculator, x: -170, y: -190, action: "modal" as const, modal: "calculator" },
+    { key: "purchase", label: "Compra", lordIcon: "orden_compra", x: 60, y: -190, action: "navigate" as const, to: "/purchases" },
+    { key: "movements", label: "Movimientos", lordIcon: "deuda", x: -170, y: -70, action: "modal" as const, modal: "debt" },
+    { key: "cashboxes", label: "Cajas", lordIcon: "caja", x: 60, y: -70, action: "navigate" as const, to: "/cashboxes" }
   ];
 
   if (isMobileView) {
@@ -371,13 +382,15 @@ export function MainLayout() {
             }}
           >
             {links
+              .filter((l) => !l.adminOnly || user?.role === "admin")
               .filter((l) => !mobilePrimaryLinks.some((p) => p.to === l.to))
               .map((link) => (
                 <NavLink
                   key={link.to}
                   to={link.to}
-                  className={`silva-mobile-more__item ${isActivePath(link.to) ? "is-active" : ""}`}
+                  className={`silva-mobile-more__item ${link.parent ? "silva-mobile-more__item--sub" : ""} ${isActivePath(link.to) ? "is-active" : ""}`}
                   onClick={() => setMobileMoreOpen(false)}
+                  style={link.parent ? { paddingLeft: 32 } : undefined}
                 >
                   <NavIcon item={link} size={22} />
                   <span>{link.label}</span>
@@ -444,7 +457,7 @@ export function MainLayout() {
                     navigate(actionConfig.to);
                     setIsQuickMenuOpen(false);
                   } else if (action === "modal" && actionConfig.modal) {
-                    openQuickModal(actionConfig.modal);
+                    openQuickModal(actionConfig.modal as "debt" | "calculator" | "note");
                   }
                 }}
               >
@@ -500,11 +513,16 @@ export function MainLayout() {
             className={`silva-modal-backdrop ${quickModal === "calculator" ? "silva-calculator-backdrop" : "silva-mobile-sheet-backdrop"}`}
             role="dialog"
             aria-modal="true"
-            aria-label={quickModal === "calculator" ? "Calculadora" : "Acción rápida"}
-            onClick={() => quickModal === "calculator" && setQuickModal(null)}
+            aria-label={quickModal === "calculator" ? "Calculadora" : quickModal === "note" ? "Agregar nota" : "Acción rápida"}
+            onClick={() => (quickModal === "calculator" || quickModal === "note") && setQuickModal(null)}
           >
             {quickModal === "calculator" ? (
               <CalculatorModal onClose={() => setQuickModal(null)} />
+            ) : quickModal === "note" ? (
+              <AddNoteModal
+                onClose={() => setQuickModal(null)}
+                onSuccess={() => navigate("/notes")}
+              />
             ) : (
             <div className="silva-modal silva-mobile-sheet" onClick={(e) => e.stopPropagation()}>
               {quickModal === "payment" && (
@@ -791,13 +809,14 @@ export function MainLayout() {
 
         <nav className="silva-nav">
           <div className="silva-nav__title">Menu</div>
-          {links.map((link) => (
+          {links.filter((l) => !l.adminOnly || user?.role === "admin").map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
-              end={link.to === "/"}
-              className={`silva-nav__link ${isActivePath(link.to) ? "is-active" : ""}`}
+              end={link.to === "/" || link.to === "/notes"}
+              className={`silva-nav__link ${link.parent ? "silva-nav__link--sub" : ""} ${isActivePath(link.to) ? "is-active" : ""}`}
               title={sidebarCollapsed ? link.label : undefined}
+              style={link.parent ? { paddingLeft: sidebarCollapsed ? undefined : 28 } : undefined}
             >
               <NavIcon item={link} size={sidebarCollapsed ? 28 : 16} />
               <span>{link.label}</span>
@@ -806,6 +825,18 @@ export function MainLayout() {
         </nav>
 
         <div className="silva-sidebar__footer">
+          {user?.role === "admin" && (
+            <button
+              type="button"
+              onClick={() => setQuickModal("note")}
+              className="silva-nav__link"
+              style={{ width: "100%" }}
+              title={sidebarCollapsed ? "Agregar nota" : undefined}
+            >
+              <FileText size={sidebarCollapsed ? 28 : 16} />
+              <span>Agregar nota</span>
+            </button>
+          )}
           <button type="button" onClick={logout} className="silva-nav__link" style={{ width: "100%" }} title={sidebarCollapsed ? "Cerrar sesión" : undefined}>
             <LogOut size={sidebarCollapsed ? 28 : 16} />
             <span>Cerrar sesión</span>
@@ -887,6 +918,21 @@ export function MainLayout() {
             setQuickImeiScannerOpen(false);
           }}
         />
+      )}
+      {quickModal === "note" && (
+        <div
+          className="silva-modal-backdrop silva-mobile-sheet-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Agregar nota"
+          onClick={() => setQuickModal(null)}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+        >
+          <AddNoteModal
+            onClose={() => setQuickModal(null)}
+            onSuccess={() => navigate("/notes")}
+          />
+        </div>
       )}
       <RouteTransitionPreloader />
     </div>

@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { Box } from "../components/Box";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
-import { isMobile } from "../utils/isMobile";
+import { ImeiInputWithMobileChoice } from "../components/ImeiInputWithMobileChoice";
 import { ArrowLeft, CheckCircle, Pencil, Trash2 } from "lucide-react";
 import { LordIcon } from "../components/LordIcon";
 import { getBaseModels, getVersionOptions, getModelForVersionKey } from "../utils/phoneCatalogGroup";
@@ -358,15 +358,28 @@ export function PurchaseOrderDetailPage() {
         </form>
       </Box>
 
-      {pendingItems.length > 0 && (
+      {pendingItems.length > 0 ? (
         <Box className="mb-6" style={{ borderLeft: "4px solid var(--silva-success)", paddingBottom: "3.5rem" }}>
           <span className="silva-badge silva-badge-success" style={{ marginBottom: "0.75rem", display: "inline-block" }}>
-            Recepción por IMEI
+            Cargar equipos (nuevos o usados)
           </span>
           <p style={{ color: "var(--silva-muted)", fontSize: "0.9rem", marginBottom: "1rem" }}>
-            Escaneá o ingresá el IMEI para dar de alta el equipo en el inventario. El costo incluye el prorrateo del envío.
+            Elegí <strong>Nuevo o Usado</strong>, luego línea, IMEI y Recibir.
           </p>
           <form onSubmit={onReceiveByImei} className="silva-form-grid">
+            <div className="silva-col-12" style={{ marginBottom: 12 }}>
+              <span className="silva-label" style={{ display: "block", marginBottom: 6 }}>¿Qué estás recibiendo?</span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input type="radio" name="condition" checked={formReceive.condition === "sealed"} onChange={() => setFormReceive((p) => ({ ...p, condition: "sealed" }))} />
+                  <span>Nuevo</span>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input type="radio" name="condition" checked={formReceive.condition === "used"} onChange={() => setFormReceive((p) => ({ ...p, condition: "used" }))} />
+                  <span>Usado</span>
+                </label>
+              </div>
+            </div>
             <div className="silva-col-4">
               <label className="silva-label">Línea *</label>
               <select
@@ -387,47 +400,30 @@ export function PurchaseOrderDetailPage() {
                 </p>
               )}
             </div>
-            <div className="silva-col-3">
+            <div className="silva-col-4">
               <label className="silva-label">IMEI *</label>
-              <div
-                className="silva-input-with-icon"
-                role={isMobile() ? "button" : undefined}
-                tabIndex={isMobile() ? 0 : undefined}
-                onClick={() => isMobile() && setImeiScannerOpen(true)}
-                onKeyDown={(e) => isMobile() && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setImeiScannerOpen(true))}
-                style={isMobile() ? { cursor: "pointer" } : undefined}
-              >
-                <input
-                  className="silva-input"
-                  value={formReceive.imei}
-                  onChange={(e) => setFormReceive((p) => ({ ...p, imei: e.target.value }))}
-                  placeholder={isMobile() ? "Tocá para escanear código de barras" : "Escanear o ingresar IMEI"}
-                  readOnly={isMobile()}
-                  aria-label="IMEI (en móvil tocá para escanear)"
-                />
-                <span className="silva-input-with-icon__suffix" aria-hidden>
-                  <LordIcon name="barcode" size={18} />
-                </span>
-              </div>
+              <ImeiInputWithMobileChoice
+                value={formReceive.imei}
+                onChange={(imei) => setFormReceive((p) => ({ ...p, imei }))}
+                placeholder="Escanear o ingresar IMEI"
+                onOpenScanner={() => setImeiScannerOpen(true)}
+                aria-label="IMEI"
+              />
             </div>
-            <div className="silva-col-2">
-              <label className="silva-label">Condición</label>
-              <select
-                className="silva-input"
-                value={formReceive.condition}
-                onChange={(e) => setFormReceive((p) => ({ ...p, condition: e.target.value as "sealed" | "used" }))}
-              >
-                <option value="sealed">Nuevo</option>
-                <option value="used">Usado</option>
-              </select>
-            </div>
-            <div className="silva-col-1" style={{ display: "flex", alignItems: "flex-end" }}>
+            <div className="silva-col-2" style={{ display: "flex", alignItems: "flex-end" }}>
               <button type="submit" className="silva-btn silva-btn-primary" disabled={receiving}>
                 <LordIcon name="barcode" size={16} style={{ marginRight: "4px", verticalAlign: "middle" }} />
                 Recibir
               </button>
             </div>
           </form>
+        </Box>
+      ) : (
+        <Box className="mb-6" style={{ borderLeft: "4px solid var(--silva-muted)", paddingBottom: "1rem" }}>
+          <span className="silva-badge" style={{ marginBottom: "0.5rem", display: "inline-block" }}>Recibir por IMEI</span>
+          <p style={{ color: "var(--silva-muted)", fontSize: "0.9rem", margin: 0 }}>
+            Agregá ítems a esta orden (modelo, memoria, color, cantidad) más arriba. Cuando haya ítems pendientes, acá aparecerá el formulario para recibir por IMEI y elegir <strong>Nuevo o Usado</strong>.
+          </p>
         </Box>
       )}
 

@@ -16,6 +16,15 @@ devicesRouter.get("/", async (req, res) => {
   const skip = (page - 1) * pageSize;
   const take = pageSize;
   let baseWhere: Prisma.DeviceWhereInput = {};
+  const locationParam = Array.isArray(query.location) ? query.location[0] : query.location;
+  if (locationParam && typeof locationParam === "string") {
+    const loc = locationParam.trim();
+    if (loc === "__none__" || loc.toLowerCase() === "sin asignar") {
+      baseWhere = { ...baseWhere, OR: [{ location: null }, { location: "" }] };
+    } else if (loc) {
+      baseWhere = { ...baseWhere, location: loc };
+    }
+  }
   if (req.user?.role === "reseller") {
     const visibleStates = await prisma.deviceStatus.findMany({
       where: { isActive: true, isVisibleForReseller: true },
@@ -51,12 +60,14 @@ devicesRouter.get("/", async (req, res) => {
   res.json({ devices: withStatus, meta: { page, pageSize, total } });
 });
 
+const MANUAL_ACCESSORY_PREFIX = "MANUAL-";
+
 devicesRouter.post("/", requireRole("admin"), async (req, res) => {
   const actorId = String(req.user!.id);
   const createDeviceSchema = z.object({
     serialNumber: z.string().trim().optional(),
-    imei: z.string().trim().regex(/^\d{10,20}$/, "El IMEI debe contener solo dígitos (10 a 20)."),
-    model: z.string().trim().min(2, "El modelo es obligatorio."),
+    imei: z.string().trim().optional(),
+    model: z.string().trim().min(2, "El modelo/descripción es obligatorio."),
     color: z.string().trim().min(1).optional(),
     memory: z.string().trim().min(1).optional(),
     warrantyStatus: z.string().trim().min(1).optional(),
@@ -67,7 +78,8 @@ devicesRouter.post("/", requireRole("admin"), async (req, res) => {
     condition: z.enum(["sealed", "used", "technical_service"]).default("sealed"),
     technicianId: z.string().uuid().optional().nullable(),
     location: z.string().trim().min(1).optional(),
-    sourceType: z.enum(["trade_in", "manual"]).optional()
+    sourceType: z.enum(["trade_in", "manual"]).optional(),
+    productType: z.enum(["phone", "airpods", "cargador", "cable", "ipad"]).optional()
   });
   const parsed = createDeviceSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -78,6 +90,28 @@ devicesRouter.post("/", requireRole("admin"), async (req, res) => {
   }
 
   const input = parsed.data;
+  const isAccessory = input.sourceType === "manual" && input.productType && input.productType !== "phone";
+  let imeiToUse: string;
+
+  if (isAccessory) {
+    const raw = (input.imei ?? "").trim();
+    if (raw) {
+      if (raw.length > 50) {
+        res.status(400).json({ message: "El código/referencia no puede superar 50 caracteres." });
+        return;
+      }
+      imeiToUse = raw.startsWith(MANUAL_ACCESSORY_PREFIX) ? raw : `${MANUAL_ACCESSORY_PREFIX}${input.productType!.toUpperCase()}-${raw}`;
+    } else {
+      imeiToUse = `${MANUAL_ACCESSORY_PREFIX}${input.productType!.toUpperCase()}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+  } else {
+    if (!input.imei || !/^\d{10,20}$/.test(input.imei.replace(/\s/g, ""))) {
+      res.status(400).json({ message: "El IMEI debe contener solo dígitos (10 a 20)." });
+      return;
+    }
+    imeiToUse = input.imei.replace(/\s/g, "");
+  }
+
   if (input.sourceType === "trade_in") {
     if (!input.memory?.trim() || !input.color?.trim()) {
       res.status(400).json({ message: "Para trade-in son obligatorios modelo, memoria y color del catálogo." });
@@ -87,11 +121,11 @@ devicesRouter.post("/", requireRole("admin"), async (req, res) => {
       res.status(400).json({ message: "Combinación modelo / memoria / color no válida según el catálogo." });
       return;
     }
-  } else if (input.model && input.memory && input.color && !isValidModelMemoryColor(input.model, input.memory, input.color)) {
+  } else if (!isAccessory && input.model && input.memory && input.color && !isValidModelMemoryColor(input.model, input.memory, input.color)) {
     res.status(400).json({ message: "Combinación modelo / memoria / color no válida según el catálogo." });
     return;
   }
-  if (!input.sourceType && (!input.serialNumber || input.serialNumber.length < 2)) {
+  if (!input.sourceType && !isAccessory && (!input.serialNumber || input.serialNumber.length < 2)) {
     res.status(400).json({ message: "N° de serie obligatorio para ingreso manual. Para equipos de compra usá Compras → Recepción por IMEI." });
     return;
   }
@@ -115,7 +149,7 @@ devicesRouter.post("/", requireRole("admin"), async (req, res) => {
     }
     const device = await prisma.device.create({
       data: {
-        imei: input.imei,
+        imei: imeiToUse,
         serialNumber: input.serialNumber && input.serialNumber.length >= 2 ? input.serialNumber : null,
         model: input.model,
         color: input.color ?? null,

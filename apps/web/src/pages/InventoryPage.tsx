@@ -1,13 +1,14 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import Isotope from "isotope-layout";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { api } from "../api/client";
 import { useAuth } from "../state/auth";
 import { Box } from "../components/Box";
 import { CheckSquare, Package, Smartphone, BarChart2, ChevronRight, ChevronLeft } from "lucide-react";
 import { LordIcon } from "../components/LordIcon";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
+import { ImeiInputWithMobileChoice } from "../components/ImeiInputWithMobileChoice";
 import { isMobile } from "../utils/isMobile";
 import { getBaseModels, getVersionOptions, getModelForVersionKey } from "../utils/phoneCatalogGroup";
 
@@ -19,6 +20,7 @@ type Device = {
   modelDisplay?: string | null;
   color?: string;
   memory?: string;
+  location?: string | null;
   warrantyStatus?: string;
   batteryCycles?: number;
   state: string;
@@ -57,6 +59,8 @@ type DeviceStatus = {
 
 export function InventoryPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const openTradeInFromState = (location.state as { openTradeIn?: boolean } | null)?.openTradeIn === true;
   const [devices, setDevices] = useState<Device[]>([]);
   const [mainSection, setMainSection] = useState<"sealed" | "used" | "technical_service">("sealed");
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +88,7 @@ export function InventoryPage() {
     : "";
   const [tradeInLoading, setTradeInLoading] = useState(false);
   const [imeiScannerOpen, setImeiScannerOpen] = useState(false);
+  const [imeiScanFor, setImeiScanFor] = useState<"tradeIn" | "manualLoad" | null>(null);
   const [tradeInCardOpen, setTradeInCardOpen] = useState(false);
   const [pendingToScan, setPendingToScan] = useState<number>(0);
   const [technicians, setTechnicians] = useState<Array<{ id: string; name: string }>>([]);
@@ -106,6 +111,23 @@ export function InventoryPage() {
     technician: { id: string; name: string };
   }>>([]);
   const [deletingDeviceId, setDeletingDeviceId] = useState<string | null>(null);
+  const [manualLoadOpen, setManualLoadOpen] = useState(false);
+  const [manualLoadForm, setManualLoadForm] = useState({
+    productType: "phone" as "phone" | "airpods" | "cargador" | "cable" | "ipad",
+    imei: "",
+    baseModel: "",
+    versionKey: "" as "" | "Plus" | "Pro" | "Pro Max",
+    memory: "",
+    color: "",
+    description: "",
+    codigo: "",
+    condition: "sealed" as "sealed" | "used"
+  });
+  const manualLoadModel = manualLoadForm.baseModel
+    ? getModelForVersionKey(phoneCatalog, manualLoadForm.baseModel, manualLoadForm.versionKey)
+    : "";
+  const [manualLoadLoading, setManualLoadLoading] = useState(false);
+  const [manualLoadError, setManualLoadError] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<Array<{
     id: string;
     orderId: string;
@@ -146,6 +168,10 @@ export function InventoryPage() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (openTradeInFromState) setTradeInCardOpen(true);
+  }, [openTradeInFromState]);
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -364,6 +390,70 @@ export function InventoryPage() {
     }
   }
 
+  async function onSubmitManualLoad(e: FormEvent) {
+    e.preventDefault();
+    const confirmar = window.confirm(
+      "Estás por cargar un ítem sin orden de compra (OC). No quedará registro de a quién se compró ni vinculado a ninguna OC. ¿Continuar?"
+    );
+    if (!confirmar) return;
+    setManualLoadError(null);
+    const isPhone = manualLoadForm.productType === "phone";
+    if (isPhone) {
+      const imei = manualLoadForm.imei.replace(/\s/g, "");
+      if (!imei || !/^\d{10,20}$/.test(imei)) {
+        setManualLoadError("IMEI obligatorio (10 a 20 dígitos).");
+        return;
+      }
+      if (!manualLoadModel || !manualLoadForm.memory || !manualLoadForm.color) {
+        setManualLoadError("Modelo, memoria y color son obligatorios para equipo.");
+        return;
+      }
+    } else {
+      const desc = manualLoadForm.description.trim();
+      if (!desc || desc.length < 2) {
+        setManualLoadError("Descripción obligatoria (mín. 2 caracteres).");
+        return;
+      }
+    }
+    setManualLoadLoading(true);
+    try {
+      const body: Record<string, unknown> = {
+        sourceType: "manual",
+        productType: manualLoadForm.productType,
+        condition: manualLoadForm.condition,
+        state: "available"
+      };
+      if (isPhone) {
+        body.imei = manualLoadForm.imei.replace(/\s/g, "");
+        body.model = manualLoadModel;
+        body.memory = manualLoadForm.memory;
+        body.color = manualLoadForm.color;
+      } else {
+        body.model = manualLoadForm.description.trim();
+        if (manualLoadForm.codigo.trim()) body.imei = manualLoadForm.codigo.trim();
+      }
+      await api.post("/devices", body);
+      setManualLoadOpen(false);
+      setManualLoadForm({
+        productType: "phone",
+        imei: "",
+        baseModel: "",
+        versionKey: "",
+        memory: "",
+        color: "",
+        description: "",
+        codigo: "",
+        condition: "sealed"
+      });
+      await load();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setManualLoadError(msg ?? "No se pudo dar de alta.");
+    } finally {
+      setManualLoadLoading(false);
+    }
+  }
+
   function parseModelRank(model: string): number {
     const m = model.toLowerCase();
     const v = m.match(/iphone\s*(\d+)/i);
@@ -549,8 +639,16 @@ export function InventoryPage() {
         <h2 className="silva-page-title">Inventario de equipos</h2>
       </div>
       {error && (
-        <div className="silva-alert" role="alert">
-          {error}
+        <div className="silva-alert" role="alert" style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <span style={{ flex: "1 1 auto" }}>{error}</span>
+          <button
+            type="button"
+            className="silva-btn silva-btn-ghost"
+            onClick={() => setError(null)}
+            aria-label="Cerrar mensaje"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -573,32 +671,27 @@ export function InventoryPage() {
             >
               {tradeInCardOpen ? "▼" : "▶"} Agregar equipo Trade-in
             </button>
+            <button
+              type="button"
+              className="silva-btn silva-btn-ghost"
+              onClick={() => { setManualLoadError(null); setManualLoadOpen(true); }}
+              aria-label="Carga manual sin orden de compra"
+            >
+              Carga Manual
+            </button>
           </div>
           {tradeInCardOpen && (
             <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--silva-border)" }}>
               <form onSubmit={onSubmitTradeIn} className="silva-form-grid">
               <div className="silva-col-4">
                 <label className="silva-label">IMEI *</label>
-                <div
-                  className="silva-input-with-icon"
-                  role={isMobile() ? "button" : undefined}
-                  tabIndex={isMobile() ? 0 : undefined}
-                  onClick={() => isMobile() && setImeiScannerOpen(true)}
-                  onKeyDown={(e) => isMobile() && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setImeiScannerOpen(true))}
-                  style={isMobile() ? { cursor: "pointer" } : undefined}
-                >
-                  <input
-                    className="silva-input"
-                    value={tradeInForm.imei}
-                    onChange={(e) => setTradeInForm((p) => ({ ...p, imei: e.target.value }))}
-                    placeholder={isMobile() ? "Tocá para escanear código de barras" : "Solo dígitos"}
-                    readOnly={isMobile()}
-                    aria-label="IMEI (en móvil tocá para escanear)"
-                  />
-                  <span className="silva-input-with-icon__suffix" aria-hidden>
-                    <LordIcon name="barcode" size={18} />
-                  </span>
-                </div>
+                <ImeiInputWithMobileChoice
+                  value={tradeInForm.imei}
+                  onChange={(imei) => setTradeInForm((p) => ({ ...p, imei }))}
+                  placeholder="Solo dígitos"
+                  onOpenScanner={() => { setImeiScanFor("tradeIn"); setImeiScannerOpen(true); }}
+                  aria-label="IMEI"
+                />
               </div>
               <div className="silva-col-4">
                 <label className="silva-label">Modelo *</label>
@@ -951,6 +1044,11 @@ export function InventoryPage() {
                 </button>
                 <h2 className="silva-stock-detail-title">{selectedModelGroup.model}</h2>
                 <p className="silva-stock-detail-subtitle">Disponibles para venta</p>
+                {user?.role === "admin" && (
+                  <p className="silva-helper" style={{ marginBottom: 12, fontSize: "0.85rem" }}>
+                    Elegí una variante (memoria/color) para ver la lista de IMEIs y poder eliminar equipos si cargaste alguno por error.
+                  </p>
+                )}
                 <div className="silva-stock-detail__panel">
                 <div className="silva-stock-variant-grid">
                   {(() => {
@@ -1145,13 +1243,160 @@ export function InventoryPage() {
         </Box>
       )}
 
+      {manualLoadOpen && (
+        <div className="silva-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="manual-load-title" onClick={() => setManualLoadOpen(false)}>
+          <div className="silva-modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+            <h3 id="manual-load-title" className="silva-modal-title" style={{ margin: 0 }}>Carga manual</h3>
+            <p className="silva-helper" style={{ margin: "0.25rem 0 1rem" }}>
+              Alta sin orden de compra (correcciones, ajustes o ítems que no pasan por OC).
+            </p>
+            <form onSubmit={onSubmitManualLoad}>
+              <div className="silva-form-grid">
+                <div className="silva-col-12" style={{ marginBottom: 12 }}>
+                  <label className="silva-label">Tipo de ítem *</label>
+                  <select
+                    className="silva-input"
+                    value={manualLoadForm.productType}
+                    onChange={(e) => setManualLoadForm((p) => ({ ...p, productType: e.target.value as typeof p.productType, imei: "", baseModel: "", versionKey: "", memory: "", color: "", description: "", codigo: "" }))}
+                  >
+                    <option value="phone">Equipo (celular)</option>
+                    <option value="airpods">AirPods</option>
+                    <option value="cargador">Cargador</option>
+                    <option value="cable">Cable</option>
+                    <option value="ipad">iPad</option>
+                  </select>
+                </div>
+                <div className="silva-col-12" style={{ marginBottom: 8 }}>
+                  <label className="silva-label">Condición</label>
+                  <select
+                    className="silva-input"
+                    value={manualLoadForm.condition}
+                    onChange={(e) => setManualLoadForm((p) => ({ ...p, condition: e.target.value as "sealed" | "used" }))}
+                  >
+                    <option value="sealed">Nuevo</option>
+                    <option value="used">Usado</option>
+                  </select>
+                </div>
+                {manualLoadForm.productType === "phone" ? (
+                  <>
+                    <div className="silva-col-6">
+                      <label className="silva-label">IMEI *</label>
+                      <ImeiInputWithMobileChoice
+                        value={manualLoadForm.imei}
+                        onChange={(imei) => setManualLoadForm((p) => ({ ...p, imei }))}
+                        placeholder="10 a 20 dígitos"
+                        onOpenScanner={() => { setImeiScanFor("manualLoad"); setImeiScannerOpen(true); }}
+                        aria-label="IMEI"
+                      />
+                    </div>
+                    <div className="silva-col-6">
+                      <label className="silva-label">Modelo *</label>
+                      <select
+                        className="silva-input"
+                        value={manualLoadForm.baseModel}
+                        onChange={(e) => setManualLoadForm((p) => ({ ...p, baseModel: e.target.value, versionKey: "", memory: "", color: "" }))}
+                        required
+                      >
+                        <option value="">Seleccionar</option>
+                        {getBaseModels(phoneCatalog).map((base) => (
+                          <option key={base} value={base}>{base}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="silva-col-6">
+                      <label className="silva-label">Versión</label>
+                      <select
+                        className="silva-input"
+                        value={manualLoadForm.versionKey}
+                        onChange={(e) => setManualLoadForm((p) => ({ ...p, versionKey: e.target.value as "" | "Plus" | "Pro" | "Pro Max", memory: "", color: "" }))}
+                        disabled={!manualLoadForm.baseModel}
+                      >
+                        {getVersionOptions(phoneCatalog, manualLoadForm.baseModel).map((opt) => (
+                          <option key={opt.value || "base"} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="silva-col-6">
+                      <label className="silva-label">Memoria *</label>
+                      <select
+                        className="silva-input"
+                        value={manualLoadForm.memory}
+                        onChange={(e) => setManualLoadForm((p) => ({ ...p, memory: e.target.value }))}
+                        required
+                        disabled={!manualLoadModel}
+                      >
+                        <option value="">Seleccionar</option>
+                        {phoneCatalog.find((c) => c.model === manualLoadModel)?.storages.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="silva-col-12">
+                      <label className="silva-label">Color *</label>
+                      <select
+                        className="silva-input"
+                        value={manualLoadForm.color}
+                        onChange={(e) => setManualLoadForm((p) => ({ ...p, color: e.target.value }))}
+                        required
+                        disabled={!manualLoadModel}
+                      >
+                        <option value="">Seleccionar</option>
+                        {phoneCatalog.find((c) => c.model === manualLoadModel)?.colors.map((col) => (
+                          <option key={col} value={col}>{col}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="silva-col-12">
+                      <label className="silva-label">Descripción / modelo *</label>
+                      <input
+                        type="text"
+                        className="silva-input"
+                        value={manualLoadForm.description}
+                        onChange={(e) => setManualLoadForm((p) => ({ ...p, description: e.target.value }))}
+                        placeholder="Ej. AirPods Pro 2, Cargador 20W USB-C, Cable Lightning"
+                      />
+                    </div>
+                    <div className="silva-col-12">
+                      <label className="silva-label">Código o referencia (opcional)</label>
+                      <input
+                        type="text"
+                        className="silva-input"
+                        value={manualLoadForm.codigo}
+                        onChange={(e) => setManualLoadForm((p) => ({ ...p, codigo: e.target.value }))}
+                        placeholder="Dejar vacío para que se genere automático"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              {manualLoadError && (
+                <div className="silva-alert" role="alert" style={{ marginTop: 12 }}>{manualLoadError}</div>
+              )}
+              <div className="silva-modal-actions" style={{ marginTop: 16 }}>
+                <button type="button" className="silva-btn" onClick={() => setManualLoadOpen(false)} disabled={manualLoadLoading}>
+                  Cancelar
+                </button>
+                <button type="submit" className="silva-btn silva-btn-primary" disabled={manualLoadLoading}>
+                  {manualLoadLoading ? "Guardando…" : "Dar de alta"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {imeiScannerOpen && (
         <ImeiBarcodeScannerModal
           open={imeiScannerOpen}
-          onClose={() => setImeiScannerOpen(false)}
+          onClose={() => { setImeiScannerOpen(false); setImeiScanFor(null); }}
           onScan={(digits) => {
-            setTradeInForm((p) => ({ ...p, imei: digits }));
+            if (imeiScanFor === "manualLoad") setManualLoadForm((p) => ({ ...p, imei: digits }));
+            else setTradeInForm((p) => ({ ...p, imei: digits }));
             setImeiScannerOpen(false);
+            setImeiScanFor(null);
           }}
         />
       )}

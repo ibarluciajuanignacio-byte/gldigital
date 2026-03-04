@@ -1,10 +1,10 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { Box } from "../components/Box";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
-import { isMobile } from "../utils/isMobile";
+import { ImeiInputWithMobileChoice } from "../components/ImeiInputWithMobileChoice";
 import { LordIcon } from "../components/LordIcon";
 
 type Supplier = { id: string; name: string };
@@ -251,79 +251,86 @@ export function PurchasesPage() {
         </form>
       </Box>
 
-      {pendingItems.length > 0 && (
-        <Box className="mb-6" style={{ borderLeft: "4px solid var(--silva-success)", paddingBottom: "3.5rem" }}>
-          <span className="silva-badge silva-badge-success" style={{ marginBottom: "0.75rem", display: "inline-block" }}>
-            Recepción por IMEI
-          </span>
-          <p style={{ color: "var(--silva-muted)", fontSize: "0.9rem", marginBottom: "1rem" }}>
-            Escaneá o ingresá el IMEI para dar de alta el equipo en el inventario y vincularlo a la orden.
-          </p>
-          <form onSubmit={onReceiveByImei} className="silva-form-grid">
-            <div className="silva-col-4">
-              <label className="silva-label">Línea de orden *</label>
-              <select
-                className="silva-input"
-                value={formReceive.purchaseOrderItemId}
-                onChange={(e) => setFormReceive((p) => ({ ...p, purchaseOrderItemId: e.target.value }))}
-              >
-                <option value="">Seleccionar línea</option>
-                {pendingItems.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {itemLabel(i)} — {i.quantityReceived}/{i.quantityExpected} recibidos · {i.supplierName}
-                  </option>
-                ))}
-              </select>
-              {selectedLine && (
-                <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--silva-muted)" }}>
-                  Recibiendo: {itemLabel(selectedLine)}
-                </p>
-              )}
-            </div>
-            <div className="silva-col-3">
-              <label className="silva-label">IMEI *</label>
-              <div
-                className="silva-input-with-icon"
-                role={isMobile() ? "button" : undefined}
-                tabIndex={isMobile() ? 0 : undefined}
-                onClick={() => isMobile() && setImeiScannerOpen(true)}
-                onKeyDown={(e) => isMobile() && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setImeiScannerOpen(true))}
-                style={isMobile() ? { cursor: "pointer" } : undefined}
-              >
-                <input
-                  className="silva-input"
-                  value={formReceive.imei}
-                  onChange={(e) => setFormReceive((p) => ({ ...p, imei: e.target.value }))}
-                  placeholder={isMobile() ? "Tocá para escanear código de barras" : "Escanear o ingresar IMEI"}
-                  readOnly={isMobile()}
-                  aria-label="IMEI (en móvil tocá para escanear)"
-                />
-                <span className="silva-input-with-icon__suffix" aria-hidden>
-                  <LordIcon name="barcode" size={18} />
-                </span>
+      {/* Cargar equipos (nuevos o usados): siempre visible */}
+      <Box className="mb-6" style={{ borderLeft: "4px solid var(--silva-success)", paddingBottom: "1.5rem" }}>
+        <span className="silva-badge silva-badge-success" style={{ marginBottom: "0.75rem", display: "inline-block" }}>
+          Cargar equipos al inventario (nuevos o usados)
+        </span>
+        {pendingItems.length === 0 ? (
+          <>
+            <p style={{ color: "var(--silva-muted)", fontSize: "0.9rem", marginBottom: "0.75rem" }}>
+              Para recibir por IMEI con opción <strong>Nuevo / Usado</strong>: entrá a una orden, agregá ítems (modelo, memoria, color, cantidad) y volvé acá; aparecerá el formulario.
+            </p>
+            <p style={{ marginBottom: "1rem", fontSize: "0.9rem" }}>
+              <strong>¿Solo querés cargar un equipo usado a mano?</strong> Sin orden ni nada:
+            </p>
+            <Link to="/inventory" state={{ openTradeIn: true }} className="silva-btn silva-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              Cargar equipo usado a mano
+            </Link>
+          </>
+        ) : (
+          <>
+            <p style={{ color: "var(--silva-muted)", fontSize: "0.9rem", marginBottom: "1rem" }}>
+              Elegí <strong>Nuevo o Usado</strong> abajo, luego línea, IMEI y Recibir. Podés escanear o tipear el IMEI.
+            </p>
+            <form onSubmit={onReceiveByImei} className="silva-form-grid">
+              <div className="silva-col-12" style={{ marginBottom: 12 }}>
+                <span className="silva-label" style={{ display: "block", marginBottom: 6 }}>¿Qué estás recibiendo?</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <input type="radio" name="condition" checked={formReceive.condition === "sealed"} onChange={() => setFormReceive((p) => ({ ...p, condition: "sealed" }))} />
+                    <span>Nuevo</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <input type="radio" name="condition" checked={formReceive.condition === "used_a"} onChange={() => setFormReceive((p) => ({ ...p, condition: "used_a" }))} />
+                    <span>Usado grado A</span>
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                    <input type="radio" name="condition" checked={formReceive.condition === "used_ab"} onChange={() => setFormReceive((p) => ({ ...p, condition: "used_ab" }))} />
+                    <span>Usado grado AB</span>
+                  </label>
+                </div>
               </div>
-            </div>
-            <div className="silva-col-2">
-              <label className="silva-label">Condición</label>
-              <select
-                className="silva-input"
-                value={formReceive.condition}
-                onChange={(e) => setFormReceive((p) => ({ ...p, condition: e.target.value as "sealed" | "used_a" | "used_ab" }))}
-              >
-                <option value="sealed">Nuevo</option>
-                <option value="used_a">Usado grado A</option>
-                <option value="used_ab">Usado grado AB</option>
-              </select>
-            </div>
-            <div className="silva-col-1" style={{ display: "flex", alignItems: "flex-end" }}>
-              <button type="submit" className="silva-btn silva-btn-primary" disabled={receiving}>
-                <LordIcon name="barcode" size={18} />
-                Recibir
-              </button>
-            </div>
-          </form>
-        </Box>
-      )}
+              <div className="silva-col-4">
+                <label className="silva-label">Línea de orden *</label>
+                <select
+                  className="silva-input"
+                  value={formReceive.purchaseOrderItemId}
+                  onChange={(e) => setFormReceive((p) => ({ ...p, purchaseOrderItemId: e.target.value }))}
+                >
+                  <option value="">Seleccionar línea</option>
+                  {pendingItems.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {itemLabel(i)} — {i.quantityReceived}/{i.quantityExpected} · {i.supplierName}
+                    </option>
+                  ))}
+                </select>
+                {selectedLine && (
+                  <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem", color: "var(--silva-muted)" }}>
+                    Recibiendo: {itemLabel(selectedLine)}
+                  </p>
+                )}
+              </div>
+              <div className="silva-col-4">
+                <label className="silva-label">IMEI *</label>
+                <ImeiInputWithMobileChoice
+                  value={formReceive.imei}
+                  onChange={(imei) => setFormReceive((p) => ({ ...p, imei }))}
+                  placeholder="Escanear o ingresar IMEI"
+                  onOpenScanner={() => setImeiScannerOpen(true)}
+                  aria-label="IMEI"
+                />
+              </div>
+              <div className="silva-col-2" style={{ display: "flex", alignItems: "flex-end" }}>
+                <button type="submit" className="silva-btn silva-btn-primary" disabled={receiving}>
+                  <LordIcon name="barcode" size={18} />
+                  Recibir
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </Box>
 
       {imeiScannerOpen && (
         <ImeiBarcodeScannerModal

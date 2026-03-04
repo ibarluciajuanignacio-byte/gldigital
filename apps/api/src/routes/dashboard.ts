@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
+import { LedgerEntryType } from "@prisma/client";
 import { getDebtBalanceCents } from "../services/ledger.js";
 
 export const dashboardRouter = Router();
@@ -190,6 +191,32 @@ dashboardRouter.get("/", async (req, res) => {
     );
     const totalDebtCents = balances.reduce((acc, n) => acc + n.balanceCents, 0);
 
+    const resellerIdsWithDebt = balances.filter((b) => b.balanceCents > 0).map((b) => b.resellerId);
+    const oldestDebitByReseller =
+      resellerIdsWithDebt.length > 0
+        ? await prisma.debtLedgerEntry.findMany({
+            where: {
+              resellerId: { in: resellerIdsWithDebt },
+              entryType: LedgerEntryType.debit
+            },
+            select: { resellerId: true, createdAt: true },
+            orderBy: { createdAt: "asc" }
+          })
+        : [];
+    const firstDebitMap = new Map<string, Date>();
+    for (const row of oldestDebitByReseller) {
+      if (!firstDebitMap.has(row.resellerId)) firstDebitMap.set(row.resellerId, row.createdAt);
+    }
+    const now = Date.now();
+    const oneDayMs = 86_400_000;
+
+    const pendingStockRequests = await prisma.stockRequest.findMany({
+      where: { status: "pending_approval" },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+      include: { reseller: { select: { user: { select: { name: true } } } } }
+    });
+
     const devicesByState: Record<string, number> = Object.fromEntries(activeStatuses.map((s) => [s.key, 0]));
     for (const row of devicesByStateRows) {
       devicesByState[row.state] = row._count.id;
@@ -205,7 +232,15 @@ dashboardRouter.get("/", async (req, res) => {
     const debtByReseller = balances
       .filter((b) => b.balanceCents !== 0)
       .sort((a, b) => b.balanceCents - a.balanceCents)
-      .slice(0, 10);
+      .slice(0, 10)
+      .map((b) => ({
+        resellerId: b.resellerId,
+        resellerName: b.resellerName,
+        balanceCents: b.balanceCents,
+        daysOwing: firstDebitMap.has(b.resellerId)
+          ? Math.floor((now - firstDebitMap.get(b.resellerId)!.getTime()) / oneDayMs)
+          : 0
+      }));
 
     const today = new Date();
     const month = today.getMonth();
@@ -225,7 +260,16 @@ dashboardRouter.get("/", async (req, res) => {
         consignmentsByStatus,
         paymentsByStatus,
         debtByReseller
-      }
+      },
+      pendingStockRequests: pendingStockRequests.map((r) => ({
+        id: r.id,
+        resellerId: r.resellerId,
+        title: r.title,
+        note: r.note ?? null,
+        resellerName: r.reseller.user.name,
+        createdAt: r.createdAt.toISOString(),
+        quantity: r.quantity
+      }))
     });
     return;
   }

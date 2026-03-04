@@ -27,6 +27,8 @@ export function ResellersPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmReseller, setDeleteConfirmReseller] = useState<Reseller | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -43,7 +45,8 @@ export function ResellersPage() {
     setLoadError(null);
     try {
       const { data } = await api.get("/resellers");
-      setResellers(data.resellers ?? []);
+      const list = (data.resellers ?? []).filter((r: Reseller) => r.user?.name !== "Varios");
+      setResellers(list);
     } catch {
       setLoadError("No se pudo cargar la lista de revendedores.");
       setResellers([]);
@@ -79,17 +82,32 @@ export function ResellersPage() {
     }
   }
 
-  async function onDelete(reseller: Reseller, e: React.MouseEvent) {
+  function openDeleteConfirm(reseller: Reseller, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm(`¿Eliminar al revendedor "${reseller.user.name}"? Se borrarán sus consignaciones, movimientos de deuda y pagos. El usuario no podrá volver a entrar.`)) return;
-    setDeletingId(reseller.id);
+    setDeleteError(null);
+    setDeleteConfirmReseller(reseller);
+  }
+
+  function closeDeleteConfirm() {
+    if (!deletingId) {
+      setDeleteError(null);
+      setDeleteConfirmReseller(null);
+    }
+  }
+
+  async function confirmDeleteReseller() {
+    if (!deleteConfirmReseller) return;
+    const id = deleteConfirmReseller.id;
+    setDeleteError(null);
+    setDeletingId(id);
     try {
-      await api.delete(`/resellers/${reseller.id}`);
+      await api.delete(`/resellers/${id}`);
+      setDeleteConfirmReseller(null);
       await load();
     } catch (err: unknown) {
       const res = err && typeof err === "object" && "response" in err ? (err as { response?: { data?: { error?: string } } }).response : undefined;
-      window.alert(res?.data?.error ?? "No se pudo eliminar el revendedor.");
+      setDeleteError(res?.data?.error ?? "No se pudo eliminar el revendedor.");
     } finally {
       setDeletingId(null);
     }
@@ -155,14 +173,15 @@ export function ResellersPage() {
                   <td>{reseller.companyName ?? "-"}</td>
                   <td>{reseller.city ?? "-"}</td>
                   <td>{reseller.birthday ? new Date(reseller.birthday).toLocaleDateString() : "-"}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
+                  <td onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       className="silva-btn"
                       style={{ fontSize: "0.85rem", padding: "4px 8px" }}
-                      onClick={(e) => onDelete(reseller, e)}
+                      onClick={(e) => openDeleteConfirm(reseller, e)}
                       disabled={deletingId === reseller.id}
                       title="Eliminar revendedor"
+                      aria-label={`Eliminar a ${reseller.user.name}`}
                     >
                       {deletingId === reseller.id ? "..." : "Eliminar"}
                     </button>
@@ -173,6 +192,41 @@ export function ResellersPage() {
           </table>
         </div>
       </Box>
+
+      {deleteConfirmReseller && (
+        <div
+          className="silva-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-reseller-modal-title"
+          onClick={closeDeleteConfirm}
+        >
+          <div className="silva-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 id="delete-reseller-modal-title" className="silva-modal-title">¿Eliminar revendedor?</h3>
+            <p className="silva-modal-subtitle">
+              <strong>{deleteConfirmReseller.user.name}</strong>. Se borrarán sus consignaciones, movimientos de deuda y pagos. El usuario no podrá volver a entrar.
+            </p>
+            <p className="silva-helper" style={{ marginTop: 8 }}>Esta acción no se puede deshacer.</p>
+            {deleteError && (
+              <div className="silva-alert" role="alert" style={{ marginTop: 12 }}>{deleteError}</div>
+            )}
+            <div className="silva-modal-actions" style={{ marginTop: 16 }}>
+              <button type="button" className="silva-btn" onClick={closeDeleteConfirm} disabled={!!deletingId}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="silva-btn"
+                style={{ borderColor: "var(--silva-error, #c00)", color: "var(--silva-error, #c00)" }}
+                onClick={confirmDeleteReseller}
+                disabled={!!deletingId}
+              >
+                {deletingId ? "Eliminando…" : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {createModalOpen && (
         <div

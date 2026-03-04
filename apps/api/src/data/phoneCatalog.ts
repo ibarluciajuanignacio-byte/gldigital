@@ -92,19 +92,19 @@ export const PHONE_CATALOG: PhoneCatalogEntry[] = [
   {
     model: "iPhone 17",
     label: "iPhone 17 (2025)",
-    colors: ["Lavender", "Sage Green", "Mist Blue", "Titanium", "Orange"],
+    colors: ["Black", "White", "Lavender", "Mist Blue", "Sage Green"],
     storages: ["256 GB", "512 GB", "1 TB"]
   },
   {
     model: "iPhone 17 Pro",
     label: "iPhone 17 Pro (2025)",
-    colors: ["Lavender", "Sage Green", "Mist Blue", "Titanium", "Orange"],
+    colors: ["Cosmic Orange", "Deep Blue", "Silver"],
     storages: ["256 GB", "512 GB", "1 TB"]
   },
   {
     model: "iPhone 17 Pro Max",
     label: "iPhone 17 Pro Max (2025)",
-    colors: ["Lavender", "Sage Green", "Mist Blue", "Titanium", "Orange"],
+    colors: ["Cosmic Orange", "Deep Blue", "Silver"],
     storages: ["256 GB", "512 GB", "1 TB", "2 TB"]
   }
 ];

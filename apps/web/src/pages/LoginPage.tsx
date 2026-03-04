@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import { api } from "../api/client";
 import { useAuth } from "../state/auth";
 import "./LoginPage.css";
@@ -9,6 +10,21 @@ type LoginPhase = "intro" | "form" | "exit" | "done";
 
 const INTRO_DURATION_MS = 2000;
 const EXIT_DURATION_MS = 1600;
+
+/** Mensaje legible a partir del error de la API o red. */
+function getLoginErrorMessage(err: unknown): string {
+  if (!axios.isAxiosError(err)) {
+    return err instanceof Error ? err.message : "No fue posible iniciar sesión";
+  }
+  const data = err.response?.data as { message?: string; error?: string } | undefined;
+  const msg = data?.message ?? data?.error;
+  if (msg) return msg;
+  if (err.code === "ECONNREFUSED" || err.message?.includes("Network Error")) {
+    return "No se pudo conectar al servidor. ¿Está la API corriendo? (desde la raíz del proyecto: npm run dev)";
+  }
+  if (err.response?.status === 401) return "Usuario o contraseña incorrectos.";
+  return err.message || "No fue posible iniciar sesión";
+}
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -31,12 +47,17 @@ export function LoginPage() {
     e.preventDefault();
     setError(null);
     try {
-      await api.post("/auth/bootstrap");
+      // Bootstrap crea usuarios demo si no existen. Si falla (ej. BD caída), intentamos login igual.
+      try {
+        await api.post("/auth/bootstrap");
+      } catch (bootstrapErr) {
+        console.warn("Bootstrap omitido (los usuarios pueden ya existir):", bootstrapErr);
+      }
       await login(email, password);
       setPhase("exit");
     } catch (err) {
-      setError("No fue posible iniciar sesión");
-      console.error(err);
+      setError(getLoginErrorMessage(err));
+      console.error("[Login]", err);
     }
   }
 
