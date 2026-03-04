@@ -79,7 +79,8 @@ devicesRouter.post("/", requireRole("admin"), async (req, res) => {
     technicianId: z.string().uuid().optional().nullable(),
     location: z.string().trim().min(1).optional(),
     sourceType: z.enum(["trade_in", "manual"]).optional(),
-    productType: z.enum(["phone", "airpods", "cargador", "cable", "ipad"]).optional()
+    productType: z.enum(["phone", "airpods", "cargador", "cable", "ipad"]).optional(),
+    quantity: z.number().int().min(1).max(1000).optional().default(1)
   });
   const parsed = createDeviceSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -90,19 +91,26 @@ devicesRouter.post("/", requireRole("admin"), async (req, res) => {
   }
 
   const input = parsed.data;
-  const isAccessory = input.sourceType === "manual" && input.productType && input.productType !== "phone";
-  let imeiToUse: string;
+  // Solo accesorios sin IMEI: AirPods, Cargador, Cable. iPad y equipos llevan IMEI.
+  const isAccessory = input.sourceType === "manual" && input.productType && ["airpods", "cargador", "cable"].includes(input.productType);
+  const quantity = isAccessory ? Math.min(1000, Math.max(1, input.quantity ?? 1)) : 1;
 
-  if (isAccessory) {
+  function getAccessoryImei(index: number): string {
     const raw = (input.imei ?? "").trim();
-    if (raw) {
-      if (raw.length > 50) {
-        res.status(400).json({ message: "El código/referencia no puede superar 50 caracteres." });
-        return;
-      }
-      imeiToUse = raw.startsWith(MANUAL_ACCESSORY_PREFIX) ? raw : `${MANUAL_ACCESSORY_PREFIX}${input.productType!.toUpperCase()}-${raw}`;
-    } else {
-      imeiToUse = `${MANUAL_ACCESSORY_PREFIX}${input.productType!.toUpperCase()}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const base = input.productType!.toUpperCase();
+    if (raw && quantity === 1) {
+      if (raw.length > 50) return "";
+      return raw.startsWith(MANUAL_ACCESSORY_PREFIX) ? raw : `${MANUAL_ACCESSORY_PREFIX}${base}-${raw}`;
+    }
+    return `${MANUAL_ACCESSORY_PREFIX}${base}-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  let imeiToUse: string;
+  if (isAccessory) {
+    imeiToUse = getAccessoryImei(0);
+    if (quantity === 1 && (input.imei ?? "").trim().length > 50) {
+      res.status(400).json({ message: "El código/referencia no puede superar 50 caracteres." });
+      return;
     }
   } else {
     if (!input.imei || !/^\d{10,20}$/.test(input.imei.replace(/\s/g, ""))) {
@@ -147,34 +155,53 @@ devicesRouter.post("/", requireRole("admin"), async (req, res) => {
         return;
       }
     }
-    const device = await prisma.device.create({
-      data: {
-        imei: imeiToUse,
-        serialNumber: input.serialNumber && input.serialNumber.length >= 2 ? input.serialNumber : null,
-        model: input.model,
-        color: input.color ?? null,
-        memory: input.memory ?? null,
-        warrantyStatus: input.warrantyStatus ?? (isSealed ? "1 año" : null),
-        batteryCycles: input.batteryCycles ?? (isSealed ? 0 : null),
-        batteryHealth: input.batteryHealth ?? (isSealed ? 100 : null),
-        batteryStatus: input.batteryStatus ?? null,
-        state: input.state,
-        condition: input.condition,
-        technicianId: input.technicianId ?? null,
-        location: input.location ?? null,
-        sourceType: input.sourceType ?? "manual"
+    const createOne = (imei: string) =>
+      prisma.device.create({
+        data: {
+          imei,
+          serialNumber: input.serialNumber && input.serialNumber.length >= 2 ? input.serialNumber : null,
+          model: input.model,
+          color: input.color ?? null,
+          memory: input.memory ?? null,
+          warrantyStatus: input.warrantyStatus ?? (isSealed ? "1 año" : null),
+          batteryCycles: input.batteryCycles ?? (isSealed ? 0 : null),
+          batteryHealth: input.batteryHealth ?? (isSealed ? 100 : null),
+          batteryStatus: input.batteryStatus ?? null,
+          state: input.state,
+          condition: input.condition,
+          technicianId: input.technicianId ?? null,
+          location: input.location ?? null,
+          sourceType: input.sourceType ?? "manual"
+        }
+      });
+
+    let device;
+    if (isAccessory && quantity > 1) {
+      const created: Array<{ id: string; imei: string }> = [];
+      for (let i = 0; i < quantity; i++) {
+        const imei = getAccessoryImei(i);
+        device = await createOne(imei);
+        created.push({ id: device.id, imei: device.imei });
+        await writeAuditLog({
+          actorId,
+          action: "device.created",
+          entityType: "device",
+          entityId: device.id,
+          meta: { imei: device.imei, quantity: `${i + 1}/${quantity}` }
+        });
       }
-    });
-
-    await writeAuditLog({
-      actorId,
-      action: "device.created",
-      entityType: "device",
-      entityId: device.id,
-      meta: { imei: device.imei }
-    });
-
-    res.status(201).json({ device });
+      res.status(201).json({ device, created: quantity });
+    } else {
+      device = await createOne(imeiToUse);
+      await writeAuditLog({
+        actorId,
+        action: "device.created",
+        entityType: "device",
+        entityId: device.id,
+        meta: { imei: device.imei }
+      });
+      res.status(201).json({ device });
+    }
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

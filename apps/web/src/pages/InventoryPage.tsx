@@ -121,6 +121,7 @@ export function InventoryPage() {
     color: "",
     description: "",
     codigo: "",
+    quantity: "1",
     condition: "sealed" as "sealed" | "used"
   });
   const manualLoadModel = manualLoadForm.baseModel
@@ -398,6 +399,7 @@ export function InventoryPage() {
     if (!confirmar) return;
     setManualLoadError(null);
     const isPhone = manualLoadForm.productType === "phone";
+    const isIpad = manualLoadForm.productType === "ipad";
     if (isPhone) {
       const imei = manualLoadForm.imei.replace(/\s/g, "");
       if (!imei || !/^\d{10,20}$/.test(imei)) {
@@ -406,6 +408,17 @@ export function InventoryPage() {
       }
       if (!manualLoadModel || !manualLoadForm.memory || !manualLoadForm.color) {
         setManualLoadError("Modelo, memoria y color son obligatorios para equipo.");
+        return;
+      }
+    } else if (isIpad) {
+      const imei = manualLoadForm.imei.replace(/\s/g, "");
+      if (!imei || !/^\d{10,20}$/.test(imei)) {
+        setManualLoadError("IMEI obligatorio (10 a 20 dígitos).");
+        return;
+      }
+      const desc = manualLoadForm.description.trim();
+      if (!desc || desc.length < 2) {
+        setManualLoadError("Descripción / modelo obligatoria (mín. 2 caracteres).");
         return;
       }
     } else {
@@ -428,9 +441,14 @@ export function InventoryPage() {
         body.model = manualLoadModel;
         body.memory = manualLoadForm.memory;
         body.color = manualLoadForm.color;
+      } else if (isIpad) {
+        body.imei = manualLoadForm.imei.replace(/\s/g, "");
+        body.model = manualLoadForm.description.trim();
       } else {
         body.model = manualLoadForm.description.trim();
         if (manualLoadForm.codigo.trim()) body.imei = manualLoadForm.codigo.trim();
+        const q = Math.max(1, Math.min(1000, parseInt(manualLoadForm.quantity, 10) || 1));
+        body.quantity = q;
       }
       await api.post("/devices", body);
       setManualLoadOpen(false);
@@ -443,6 +461,7 @@ export function InventoryPage() {
         color: "",
         description: "",
         codigo: "",
+        quantity: "1",
         condition: "sealed"
       });
       await load();
@@ -1257,7 +1276,7 @@ export function InventoryPage() {
                   <select
                     className="silva-input"
                     value={manualLoadForm.productType}
-                    onChange={(e) => setManualLoadForm((p) => ({ ...p, productType: e.target.value as typeof p.productType, imei: "", baseModel: "", versionKey: "", memory: "", color: "", description: "", codigo: "" }))}
+                    onChange={(e) => setManualLoadForm((p) => ({ ...p, productType: e.target.value as typeof p.productType, imei: "", baseModel: "", versionKey: "", memory: "", color: "", description: "", codigo: "", quantity: "1" }))}
                   >
                     <option value="phone">Equipo (celular)</option>
                     <option value="airpods">AirPods</option>
@@ -1347,6 +1366,29 @@ export function InventoryPage() {
                       </select>
                     </div>
                   </>
+                ) : manualLoadForm.productType === "ipad" ? (
+                  <>
+                    <div className="silva-col-12">
+                      <label className="silva-label">Descripción / modelo *</label>
+                      <input
+                        type="text"
+                        className="silva-input"
+                        value={manualLoadForm.description}
+                        onChange={(e) => setManualLoadForm((p) => ({ ...p, description: e.target.value }))}
+                        placeholder="Ej. iPad Pro 11\", iPad Air"
+                      />
+                    </div>
+                    <div className="silva-col-12">
+                      <label className="silva-label">IMEI *</label>
+                      <ImeiInputWithMobileChoice
+                        value={manualLoadForm.imei}
+                        onChange={(imei) => setManualLoadForm((p) => ({ ...p, imei }))}
+                        placeholder="10 a 20 dígitos"
+                        onOpenScanner={() => { setImeiScanFor("manualLoad"); setImeiScannerOpen(true); }}
+                        aria-label="IMEI"
+                      />
+                    </div>
+                  </>
                 ) : (
                   <>
                     <div className="silva-col-12">
@@ -1359,14 +1401,26 @@ export function InventoryPage() {
                         placeholder="Ej. AirPods Pro 2, Cargador 20W USB-C, Cable Lightning"
                       />
                     </div>
-                    <div className="silva-col-12">
-                      <label className="silva-label">Código o referencia (opcional)</label>
+                    <div className="silva-col-6">
+                      <label className="silva-label">Cantidad *</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={1000}
+                        className="silva-input"
+                        value={manualLoadForm.quantity}
+                        onChange={(e) => setManualLoadForm((p) => ({ ...p, quantity: e.target.value }))}
+                        placeholder="Ej. 100"
+                      />
+                    </div>
+                    <div className="silva-col-6">
+                      <label className="silva-label">Referencia interna (opcional)</label>
                       <input
                         type="text"
                         className="silva-input"
                         value={manualLoadForm.codigo}
                         onChange={(e) => setManualLoadForm((p) => ({ ...p, codigo: e.target.value }))}
-                        placeholder="Dejar vacío para que se genere automático"
+                        placeholder="Solo si es 1 unidad"
                       />
                     </div>
                   </>
