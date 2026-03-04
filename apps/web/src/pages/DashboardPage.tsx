@@ -3,7 +3,7 @@ import { api } from "../api/client";
 import { Box } from "../components/Box";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
-import { LordIcon, type LordIconName } from "../components/LordIcon";
+import { LordIcon } from "../components/LordIcon";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { AlertTriangle, MessageCircle, ClipboardList, CheckCircle, History, Pencil, Trash2 } from "lucide-react";

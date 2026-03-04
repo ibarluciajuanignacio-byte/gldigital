@@ -9,7 +9,6 @@ import { CheckSquare, Package, Smartphone, BarChart2, ChevronRight, ChevronLeft 
 import { LordIcon } from "../components/LordIcon";
 import { ImeiBarcodeScannerModal } from "../components/ImeiBarcodeScannerModal";
 import { ImeiInputWithMobileChoice } from "../components/ImeiInputWithMobileChoice";
-import { isMobile } from "../utils/isMobile";
 import { getBaseModels, getVersionOptions, getModelForVersionKey } from "../utils/phoneCatalogGroup";
 
 type Device = {

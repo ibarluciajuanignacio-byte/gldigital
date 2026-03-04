@@ -33,7 +33,7 @@ type Props = {
 
 export function AddNoteModal({ onClose, onSuccess, initialRawText }: Props) {
   const [rawText, setRawText] = useState(initialRawText ?? "");
-  const [preview, setPreview] = useState<Preview | null>(null);
+  const [, setPreview] = useState<Preview | null>(null);
   /** Vista previa editable: se puede quitar ítems antes de cargar */
   const [editedPreview, setEditedPreview] = useState<Preview | null>(null);
   const [parseLoading, setParseLoading] = useState(false);
@@ -172,7 +172,7 @@ export function AddNoteModal({ onClose, onSuccess, initialRawText }: Props) {
           {editedPreview.createResellers.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               <strong style={{ fontSize: "0.85rem" }}>Se van a crear revendedores:</strong>
-              <ul style={{ margin: "4px 0 0", paddingLeft: 20, fontSize: "0.9rem", listStyle: "none", paddingLeft: 0 }}>
+              <ul style={{ margin: "4px 0 0", paddingLeft: 0, fontSize: "0.9rem", listStyle: "none" }}>
                 {editedPreview.createResellers.map((r, i) => (
                   <li key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span>{r.name}</span>
@@ -195,7 +195,7 @@ export function AddNoteModal({ onClose, onSuccess, initialRawText }: Props) {
           {editedPreview.createClients.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               <strong style={{ fontSize: "0.85rem" }}>Se van a crear clientes:</strong>
-              <ul style={{ margin: "4px 0 0", paddingLeft: 20, fontSize: "0.9rem", listStyle: "none", paddingLeft: 0 }}>
+              <ul style={{ margin: "4px 0 0", paddingLeft: 0, fontSize: "0.9rem", listStyle: "none" }}>
                 {editedPreview.createClients.map((c, i) => (
                   <li key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span>{c.name}{c.resellerName ? ` (${c.resellerName})` : ""}</span>
@@ -219,7 +219,7 @@ export function AddNoteModal({ onClose, onSuccess, initialRawText }: Props) {
             <div style={{ marginBottom: 12 }}>
               <strong style={{ fontSize: "0.85rem" }}>Deudas a cargar:</strong>
               <div style={{ maxHeight: 220, overflow: "auto", marginTop: 6, paddingRight: 8 }}>
-                <ul style={{ margin: 0, paddingLeft: 20, fontSize: "0.9rem", listStyle: "none", paddingLeft: 0 }}>
+                <ul style={{ margin: 0, paddingLeft: 0, fontSize: "0.9rem", listStyle: "none" }}>
                   {editedPreview.debtEntries.map((d, i) => (
                     <li key={i} style={{ marginBottom: 4, display: "flex", alignItems: "flex-start", gap: 8 }}>
                       <span>
@@ -247,7 +247,7 @@ export function AddNoteModal({ onClose, onSuccess, initialRawText }: Props) {
             <div style={{ marginBottom: 12 }}>
               <strong style={{ fontSize: "0.85rem" }}>Encargues / tareas:</strong>
               <div style={{ maxHeight: 260, overflow: "auto", marginTop: 6, paddingRight: 8 }}>
-                <ul style={{ margin: 0, paddingLeft: 20, fontSize: "0.9rem", listStyle: "none", paddingLeft: 0 }}>
+                <ul style={{ margin: 0, paddingLeft: 0, fontSize: "0.9rem", listStyle: "none" }}>
                   {editedPreview.stockRequests.map((r, i) => (
                     <li key={i} style={{ marginBottom: 4, display: "flex", alignItems: "flex-start", gap: 8 }}>
                       <span>
