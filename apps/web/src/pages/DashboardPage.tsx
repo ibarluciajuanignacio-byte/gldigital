@@ -227,18 +227,19 @@ export function DashboardPage() {
     setAddTaskError(null);
     setAddTaskSubmitting(true);
     try {
-      const { data } = await api.post<{ request: PendingStockRequest }>("/stock/requests", {
+      const { data } = await api.post<{ request: PendingStockRequest & { reseller?: { user: { name: string } } } }>("/stock/requests", {
         resellerId: addTaskResellerId,
         title: addTaskTitle.trim(),
         note: addTaskNote.trim() || undefined,
         quantity: addTaskQuantity
       });
+      const resellerName = data.request.reseller?.user?.name ?? addTaskResellers.find((r) => r.id === addTaskResellerId)?.name ?? "";
       setPendingStockRequests((prev) => [{
         id: data.request.id,
-        resellerId: data.request.resellerId,
+        resellerId: data.request.resellerId ?? addTaskResellerId,
         title: data.request.title,
         note: data.request.note ?? null,
-        resellerName: addTaskResellers.find((r) => r.id === addTaskResellerId)?.name ?? "",
+        resellerName,
         createdAt: new Date().toISOString(),
         quantity: data.request.quantity
       }, ...prev]);
@@ -389,7 +390,7 @@ export function DashboardPage() {
               <AlertTriangle size={22} className="silva-home-debt-alerts__icon" aria-hidden />
               Alertas de deuda
             </h2>
-            <button type="button" onClick={() => navigate("/debts")} className="silva-home-debt-alerts__cta">
+            <button type="button" onClick={() => navigate("/debts")} className="silva-btn silva-home-debt-alerts__cta">
               Ver Deuda viva
             </button>
           </div>
@@ -448,11 +449,11 @@ export function DashboardPage() {
               Tareas pendientes
             </h2>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button type="button" onClick={openAddTaskModal} className="silva-home-debt-alerts__cta silva-btn-primary" style={{ padding: "6px 12px", fontSize: "0.9rem" }} title="Agregar tarea">
+              <button type="button" onClick={openAddTaskModal} className="silva-btn silva-btn-primary" style={{ padding: "6px 14px", fontSize: "0.9rem" }} title="Agregar tarea">
                 <Plus size={18} aria-hidden style={{ verticalAlign: "middle", marginRight: 4 }} />
                 Agregar
               </button>
-              <button type="button" onClick={() => navigate("/notes/tasks-history")} className="silva-home-debt-alerts__cta" style={{ padding: "6px 12px", fontSize: "0.9rem" }}>
+              <button type="button" onClick={() => navigate("/notes/tasks-history")} className="silva-btn silva-home-debt-alerts__cta" style={{ padding: "6px 14px", fontSize: "0.9rem" }}>
                 <History size={16} aria-hidden style={{ verticalAlign: "middle", marginRight: 4 }} />
                 Ver historial
               </button>
@@ -673,6 +674,86 @@ export function DashboardPage() {
                 disabled={!!deletingId}
               >
                 {deletingId ? "Eliminando…" : "Eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addTaskModalOpen && (
+        <div className="silva-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="add-task-modal-title" onClick={closeAddTaskModal}>
+          <div className="silva-modal silva-mobile-sheet" onClick={(e) => e.stopPropagation()}>
+            <h3 id="add-task-modal-title" className="silva-modal-title">Agregar tarea</h3>
+
+            <section style={{ marginTop: 16 }}>
+              <label className="silva-label" style={{ display: "block", marginBottom: 4 }}>Revendedor / persona</label>
+              <select
+                className="silva-input"
+                value={addTaskResellerId}
+                onChange={(e) => setAddTaskResellerId(e.target.value)}
+                style={{ width: "100%", marginTop: 4 }}
+                disabled={addTaskSubmitting}
+              >
+                <option value="">Seleccionar…</option>
+                {addTaskResellers.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </section>
+
+            <section style={{ marginTop: 16 }}>
+              <label className="silva-label" style={{ display: "block", marginBottom: 4 }}>Descripción</label>
+              <input
+                type="text"
+                className="silva-input"
+                value={addTaskTitle}
+                onChange={(e) => setAddTaskTitle(e.target.value)}
+                placeholder="Ej: consultar envío a Chaco, iphone 16 pro..."
+                style={{ width: "100%", marginTop: 4 }}
+                disabled={addTaskSubmitting}
+              />
+            </section>
+
+            <section style={{ marginTop: 16 }}>
+              <label className="silva-label" style={{ display: "block", marginBottom: 4 }}>Cantidad</label>
+              <input
+                type="number"
+                min={1}
+                max={500}
+                className="silva-input"
+                value={addTaskQuantity}
+                onChange={(e) => setAddTaskQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                style={{ width: "100%", marginTop: 4 }}
+                disabled={addTaskSubmitting}
+              />
+            </section>
+
+            <section style={{ marginTop: 16 }}>
+              <label className="silva-label" style={{ display: "block", marginBottom: 4 }}>Notas (opcional)</label>
+              <textarea
+                className="silva-input"
+                value={addTaskNote}
+                onChange={(e) => setAddTaskNote(e.target.value)}
+                placeholder="Notas adicionales"
+                rows={2}
+                style={{ width: "100%", resize: "vertical", marginTop: 4 }}
+                disabled={addTaskSubmitting}
+              />
+            </section>
+
+            {addTaskError && <div className="silva-alert" role="alert" style={{ marginTop: 12 }}>{addTaskError}</div>}
+
+            <div className="silva-modal-actions" style={{ marginTop: 20 }}>
+              <button type="button" className="silva-btn" onClick={closeAddTaskModal} disabled={addTaskSubmitting}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="silva-btn silva-btn-primary"
+                onClick={submitAddTask}
+                disabled={addTaskSubmitting || !addTaskResellerId || !addTaskTitle.trim()}
+              >
+                {addTaskSubmitting ? "Guardando…" : "Agregar tarea"}
               </button>
             </div>
           </div>
