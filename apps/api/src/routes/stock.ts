@@ -103,7 +103,16 @@ stockRouter.get("/requests/completed", requireRole("admin"), async (_req, res) =
     where: { status: "completed" },
     orderBy: { resolvedAt: "desc" },
     take: 200,
-    include: { reseller: { select: { user: { select: { name: true } } } } }
+    select: {
+      id: true,
+      title: true,
+      note: true,
+      quantity: true,
+      createdAt: true,
+      resolvedAt: true,
+      resolvedNote: true,
+      reseller: { select: { user: { select: { name: true } } } }
+    }
   });
   res.json({
     completed: list.map((r) => ({

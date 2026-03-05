@@ -197,8 +197,8 @@ notesRouter.get("/cleanup-candidates", requireRole("admin"), async (_req, res) =
 
 /** Borra revendedores y/o clientes por ID (sus tareas y deudas se eliminan en cascada). Para limpiar cargas viejas sin registro en Notas. */
 notesRouter.post("/cleanup", requireRole("admin"), async (req, res) => {
-  const resellerIds = Array.isArray(req.body?.resellerIds) ? req.body.resellerIds.filter((id) => typeof id === "string") as string[] : [];
-  const clientIds = Array.isArray(req.body?.clientIds) ? req.body.clientIds.filter((id) => typeof id === "string") as string[] : [];
+  const resellerIds = Array.isArray(req.body?.resellerIds) ? req.body.resellerIds.filter((id: unknown) => typeof id === "string") as string[] : [];
+  const clientIds = Array.isArray(req.body?.clientIds) ? req.body.clientIds.filter((id: unknown) => typeof id === "string") as string[] : [];
   if (resellerIds.length === 0 && clientIds.length === 0) {
     res.status(400).json({ message: "Indicá al menos un revendedor o cliente a borrar (resellerIds o clientIds)." });
     return;
