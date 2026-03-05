@@ -120,7 +120,9 @@ export function ChatPage() {
   const wallpaperUrl = `${import.meta.env.BASE_URL}Images/WP_Wallpaper_GldigitalChat.jpg`;
   useEffect(() => {
     document.documentElement.style.setProperty("--wa-wallpaper-url", `url(${wallpaperUrl})`);
-    return () => document.documentElement.style.removeProperty("--wa-wallpaper-url");
+    return () => {
+      document.documentElement.style.removeProperty("--wa-wallpaper-url");
+    };
   }, [wallpaperUrl]);
 
   const socket = useMemo(() => {
