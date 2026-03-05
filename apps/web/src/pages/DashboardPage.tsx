@@ -6,7 +6,7 @@ import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { LordIcon } from "../components/LordIcon";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { AlertTriangle, MessageCircle, ClipboardList, CheckCircle, History, Pencil, Trash2 } from "lucide-react";
+import { AlertTriangle, MessageCircle, ClipboardList, CheckCircle, History, Pencil, Trash2, Plus } from "lucide-react";
 
 type DashboardCharts = {
   devicesByState?: Record<string, number>;
@@ -98,6 +98,14 @@ export function DashboardPage() {
   const [deleteConfirmRequest, setDeleteConfirmRequest] = useState<PendingStockRequest | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [hoveredHechoId, setHoveredHechoId] = useState<string | null>(null);
+  const [addTaskModalOpen, setAddTaskModalOpen] = useState(false);
+  const [addTaskResellerId, setAddTaskResellerId] = useState("");
+  const [addTaskTitle, setAddTaskTitle] = useState("");
+  const [addTaskNote, setAddTaskNote] = useState("");
+  const [addTaskQuantity, setAddTaskQuantity] = useState(1);
+  const [addTaskSubmitting, setAddTaskSubmitting] = useState(false);
+  const [addTaskError, setAddTaskError] = useState<string | null>(null);
+  const [addTaskResellers, setAddTaskResellers] = useState<Array<{ id: string; name: string }>>([]);
 
   function refreshDashboard() {
     api.get("/dashboard").then((res) => {
@@ -195,6 +203,51 @@ export function DashboardPage() {
       setDeleteConfirmRequest(null);
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  function openAddTaskModal() {
+    setAddTaskError(null);
+    setAddTaskResellerId("");
+    setAddTaskTitle("");
+    setAddTaskNote("");
+    setAddTaskQuantity(1);
+    setAddTaskModalOpen(true);
+    api.get<{ resellers: Array<{ id: string; user: { name: string } }> }>("/resellers", { params: { pageSize: 200 } })
+      .then((res) => setAddTaskResellers((res.data.resellers ?? []).map((r) => ({ id: r.id, name: r.user.name }))))
+      .catch(() => setAddTaskResellers([]));
+  }
+
+  function closeAddTaskModal() {
+    if (!addTaskSubmitting) setAddTaskModalOpen(false);
+  }
+
+  async function submitAddTask() {
+    if (!addTaskResellerId || !addTaskTitle.trim()) return;
+    setAddTaskError(null);
+    setAddTaskSubmitting(true);
+    try {
+      const { data } = await api.post<{ request: PendingStockRequest }>("/stock/requests", {
+        resellerId: addTaskResellerId,
+        title: addTaskTitle.trim(),
+        note: addTaskNote.trim() || undefined,
+        quantity: addTaskQuantity
+      });
+      setPendingStockRequests((prev) => [{
+        id: data.request.id,
+        resellerId: data.request.resellerId,
+        title: data.request.title,
+        note: data.request.note ?? null,
+        resellerName: addTaskResellers.find((r) => r.id === addTaskResellerId)?.name ?? "",
+        createdAt: new Date().toISOString(),
+        quantity: data.request.quantity
+      }, ...prev]);
+      setAddTaskModalOpen(false);
+    } catch (err: unknown) {
+      const res = err && typeof err === "object" && "response" in err ? (err as { response?: { data?: { message?: string } } }).response : undefined;
+      setAddTaskError(res?.data?.message ?? "No se pudo crear la tarea.");
+    } finally {
+      setAddTaskSubmitting(false);
     }
   }
 
@@ -395,12 +448,13 @@ export function DashboardPage() {
               Tareas pendientes
             </h2>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="button" onClick={openAddTaskModal} className="silva-home-debt-alerts__cta silva-btn-primary" style={{ padding: "6px 12px", fontSize: "0.9rem" }} title="Agregar tarea">
+                <Plus size={18} aria-hidden style={{ verticalAlign: "middle", marginRight: 4 }} />
+                Agregar
+              </button>
               <button type="button" onClick={() => navigate("/notes/tasks-history")} className="silva-home-debt-alerts__cta" style={{ padding: "6px 12px", fontSize: "0.9rem" }}>
                 <History size={16} aria-hidden style={{ verticalAlign: "middle", marginRight: 4 }} />
                 Ver historial
-              </button>
-              <button type="button" onClick={() => navigate("/inventory")} className="silva-home-debt-alerts__cta">
-                Ver Stock
               </button>
             </div>
           </div>

@@ -3397,7 +3397,7 @@ html[data-theme="dark"] .silva-home-stock-legend__pct {
   flex-direction: column;
   min-width: 0;
   background-color: #efeae2;
-  background-image: url("/Images/WP_Wallpaper_GldigitalChat.jpg");
+  background-image: var(--wa-wallpaper-url, url("/Images/WP_Wallpaper_GldigitalChat.jpg"));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -3463,7 +3463,7 @@ html[data-theme="dark"] .silva-home-stock-legend__pct {
   overflow-y: auto;
   padding: 14px;
   background-color: #efeae2;
-  background-image: url("/Images/WP_Wallpaper_GldigitalChat.jpg");
+  background-image: var(--wa-wallpaper-url, url("/Images/WP_Wallpaper_GldigitalChat.jpg"));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -3636,6 +3636,14 @@ html[data-theme="dark"] .silva-home-stock-legend__pct {
   padding: 6px 4px 6px 14px;
   min-height: 42px;
   width: 100%;
+}
+
+.wa-inputbar-pill-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  min-height: 32px;
+  cursor: text;
 }
 
 .wa-inputbar-pill:focus-within {

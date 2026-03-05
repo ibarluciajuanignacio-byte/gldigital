@@ -117,6 +117,12 @@ export function ChatPage() {
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
+  const wallpaperUrl = `${import.meta.env.BASE_URL}Images/WP_Wallpaper_GldigitalChat.jpg`;
+  useEffect(() => {
+    document.documentElement.style.setProperty("--wa-wallpaper-url", `url(${wallpaperUrl})`);
+    return () => document.documentElement.style.removeProperty("--wa-wallpaper-url");
+  }, [wallpaperUrl]);
+
   const socket = useMemo(() => {
     if (!token) return null;
     return io(getApiBaseUrl(), { auth: { token } });
@@ -764,14 +770,16 @@ export function ChatPage() {
                 </label>
                 <div className="wa-inputbar-pill-wrap">
                   <div className="wa-inputbar-pill">
-                    <textarea
-                      ref={textareaRef}
-                      rows={1}
-                      className="wa-textarea"
-                      placeholder=""
-                      inputMode="text"
-                      autoComplete="off"
-                      value={text}
+                    <label htmlFor="wa-chat-message-input" className="wa-inputbar-pill-label">
+                      <textarea
+                        id="wa-chat-message-input"
+                        ref={textareaRef}
+                        rows={1}
+                        className="wa-textarea"
+                        placeholder=""
+                        inputMode="text"
+                        autoComplete="off"
+                        value={text}
                       onChange={(e) => {
                         setText(e.target.value);
                         scheduleTypingStart();
@@ -783,7 +791,8 @@ export function ChatPage() {
                         }
                       }}
                       onBlur={emitTypingStop}
-                    />
+                      />
+                    </label>
                     <button
                       type="button"
                       className="wa-icon-btn wa-icon-btn--inside wa-emoji-picker-trigger"
