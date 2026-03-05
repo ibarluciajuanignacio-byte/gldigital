@@ -103,28 +103,22 @@ stockRouter.get("/requests/completed", requireRole("admin"), async (_req, res) =
     where: { status: "completed" },
     orderBy: { resolvedAt: "desc" },
     take: 200,
-    select: {
-      id: true,
-      title: true,
-      note: true,
-      quantity: true,
-      createdAt: true,
-      resolvedAt: true,
-      resolvedNote: true,
-      reseller: { select: { user: { select: { name: true } } } }
-    }
+    include: { reseller: { select: { user: { select: { name: true } } } } }
   });
   res.json({
-    completed: list.map((r) => ({
-      id: r.id,
-      title: r.title,
-      note: r.note,
-      quantity: r.quantity,
-      resellerName: r.reseller.user.name,
-      createdAt: r.createdAt.toISOString(),
-      resolvedAt: r.resolvedAt?.toISOString() ?? null,
-      resolvedNote: r.resolvedNote ?? null
-    }))
+    completed: list.map((r) => {
+      const rExt = r as typeof r & { reseller?: { user: { name: string } }; resolvedNote?: string | null };
+      return {
+        id: r.id,
+        title: r.title,
+        note: r.note,
+        quantity: r.quantity,
+        resellerName: rExt.reseller?.user?.name ?? "",
+        createdAt: r.createdAt.toISOString(),
+        resolvedAt: r.resolvedAt?.toISOString() ?? null,
+        resolvedNote: rExt.resolvedNote ?? null
+      };
+    })
   });
 });
 
