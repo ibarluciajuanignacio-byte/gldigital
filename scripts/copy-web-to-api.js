@@ -17,4 +17,8 @@ if (!fs.existsSync(webDist)) {
 
 fs.mkdirSync(apiPublic, { recursive: true });
 fs.cpSync(webDist, apiPublic, { recursive: true });
+// Marca de build para verificar en producción qué versión se está sirviendo
+const buildInfo = { builtAt: new Date().toISOString(), buildId: Date.now() };
+fs.writeFileSync(path.join(apiPublic, "build-info.json"), JSON.stringify(buildInfo, null, 2));
 console.log("Listo: frontend copiado a apps/api/dist/public");
+console.log("  Build id:", buildInfo.buildId, "|", buildInfo.builtAt);

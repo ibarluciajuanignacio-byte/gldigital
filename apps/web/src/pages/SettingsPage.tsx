@@ -1,19 +1,30 @@
 import type { FormEvent, ChangeEvent } from "react";
 import { useEffect, useState } from "react";
+import { Upload, User } from "lucide-react";
 import { useAuth } from "../state/auth";
 import { Box } from "../components/Box";
 import { getStoredAdminName, getStoredAdminAvatar, ADMIN_NAME_KEY, ADMIN_AVATAR_KEY } from "../utils/adminProfileStorage";
+
+type BuildInfo = { builtAt: string; buildId: number } | null;
 
 export function SettingsPage() {
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [avatarDataUrl, setAvatarDataUrl] = useState("");
   const [saved, setSaved] = useState(false);
+  const [buildInfo, setBuildInfo] = useState<BuildInfo>(null);
 
   useEffect(() => {
     setName((getStoredAdminName() || user?.name) ?? "");
     setAvatarDataUrl(getStoredAdminAvatar());
   }, [user?.name]);
+
+  useEffect(() => {
+    fetch("/build-info.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: BuildInfo) => data && setBuildInfo(data))
+      .catch(() => {});
+  }, []);
 
   function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -76,32 +87,63 @@ export function SettingsPage() {
           </div>
           <div className="silva-col-6">
             <label className="silva-label">Imagen del administrador</label>
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px" }}>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="silva-input"
-                style={{ maxWidth: 260 }}
-              />
-              {avatarDataUrl && (
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: "12px" }}>
+              <div
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: "50%",
+                  border: "2px solid var(--silva-border)",
+                  overflow: "hidden",
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "var(--silva-bg)"
+                }}
+                aria-hidden
+              >
+                {avatarDataUrl ? (
                   <img
                     src={avatarDataUrl}
-                    alt="Vista previa"
+                    alt="Imagen actual del administrador"
                     style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      border: "2px solid var(--silva-border)"
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover"
                     }}
                   />
+                ) : (
+                  <User
+                    size={36}
+                    style={{ color: "var(--silva-muted)" }}
+                    aria-hidden
+                  />
+                )}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <input
+                  id="settings-avatar-file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="silva-file-input-hidden"
+                  aria-label="Elegir imagen del administrador"
+                />
+                <label
+                  htmlFor="settings-avatar-file"
+                  className="silva-btn silva-btn-primary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 0 }}
+                >
+                  <Upload size={18} aria-hidden />
+                  Elegir imagen
+                </label>
+                {avatarDataUrl && (
                   <button type="button" className="silva-btn" onClick={clearAvatar}>
                     Quitar imagen
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
           <div className="silva-col-12">
@@ -116,6 +158,11 @@ export function SettingsPage() {
           </div>
         </form>
       </Box>
+      {buildInfo && (
+        <p className="silva-helper" style={{ marginTop: 24, fontSize: "0.85rem", color: "var(--silva-muted)" }}>
+          Build desplegado: {new Date(buildInfo.builtAt).toLocaleString("es-AR")} (id: {buildInfo.buildId})
+        </p>
+      )}
     </div>
   );
 }

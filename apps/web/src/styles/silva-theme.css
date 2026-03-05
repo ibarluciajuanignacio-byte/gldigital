@@ -834,6 +834,17 @@ body {
   grid-template-columns: repeat(12, minmax(0, 1fr));
 }
 
+/** Oculta el input type="file" nativo cuando se usa un botón/label personalizado */
+.silva-file-input-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  pointer-events: none;
+}
+
 .silva-col-12 {
   grid-column: span 12 / span 12;
 }
@@ -2887,7 +2898,9 @@ html[data-theme="dark"] .silva-home-stock-legend__pct {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(0, 30, 50, 0.35);
+  background: rgba(0, 20, 40, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border: 0;
   -webkit-tap-highlight-color: transparent;
 }

@@ -15,8 +15,12 @@ PUBLIC="$ROOT/apps/api/dist/public"
 if [ -f "$PUBLIC/index.html" ]; then
   echo "Sí. index.html en apps/api/dist/public:"
   ls -la "$PUBLIC/index.html"
-  echo "Primeras líneas del index (debería tener assets con hash si es build reciente):"
-  head -5 "$PUBLIC/index.html"
+  if [ -f "$PUBLIC/build-info.json" ]; then
+    echo "build-info.json (lo que debería servir el sitio):"
+    cat "$PUBLIC/build-info.json"
+  else
+    echo "(No hay build-info.json; puede ser un build antiguo.)"
+  fi
 else
   echo "NO. No existe $PUBLIC/index.html"
   echo "Ejecutá: npm run build:deploy"
@@ -32,6 +36,9 @@ echo ""
 echo "=== 4. ¿Cómo se inicia la API? (revisar PM2 o el comando que usen) ==="
 if command -v pm2 &>/dev/null; then
   pm2 list 2>/dev/null || true
+  echo ""
+  echo "Variables de entorno del proceso (NODE_ENV debe ser production para servir el front):"
+  pm2 env 0 2>/dev/null | grep -E "NODE_ENV|PWD" || true
   echo ""
   echo "Para reiniciar después del build: pm2 restart all"
 else

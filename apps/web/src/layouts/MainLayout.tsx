@@ -92,6 +92,7 @@ export function MainLayout() {
   });
   const [quickImeiScannerOpen, setQuickImeiScannerOpen] = useState(false);
   const [, setProfileVersion] = useState(0);
+  const [adminDisplayName, setAdminDisplayName] = useState<string | null>(() => getStoredAdminName() || null);
 
   const [debtSummary, setDebtSummary] = useState<{
     items?: Array<{ resellerId: string; resellerName: string; balanceCents: number }>;
@@ -121,6 +122,8 @@ export function MainLayout() {
     pageTitles[location.pathname] ??
     (location.pathname.startsWith("/cashboxes/") ? "Caja" : location.pathname.startsWith("/suppliers/") ? "Ficha de proveedor" : "GLdigital");
 
+  const displayName = (adminDisplayName && adminDisplayName.trim()) ? adminDisplayName.trim() : (user?.name ?? "Usuario");
+
   /* Todas las rutas accesibles (candado de módulos desactivado) */
   const isLockedPath = false;
 
@@ -135,7 +138,10 @@ export function MainLayout() {
   }, [sidebarCollapsed]);
 
   useEffect(() => {
-    const handler = () => setProfileVersion((v) => v + 1);
+    const handler = () => {
+      setProfileVersion((v) => v + 1);
+      setAdminDisplayName(getStoredAdminName() || null);
+    };
     window.addEventListener("gldigital-admin-profile-updated", handler);
     return () => window.removeEventListener("gldigital-admin-profile-updated", handler);
   }, []);
@@ -348,7 +354,7 @@ export function MainLayout() {
           <div>
             <h1 className="silva-mobile-title">{currentTitle}</h1>
             <p className="silva-mobile-subtitle">
-              Hola, {user?.name ?? "Usuario"} · {user?.role ?? ""}
+              Hola, {displayName} · {user?.role ?? ""}
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -801,7 +807,7 @@ export function MainLayout() {
           />
           <div>
             <div className="silva-sidebar__name">
-              {((user?.role === "admin" && getStoredAdminName()) || user?.name) ?? "Usuario"}
+              {displayName}
             </div>
             <div className="silva-sidebar__role">{user?.role ?? ""}</div>
           </div>
@@ -872,7 +878,7 @@ export function MainLayout() {
           </div>
           <div className="silva-topbar__meta" style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <DarkModeToggle checked={isDarkMode} onChange={setDarkMode} />
-            <span>{user?.name ?? "Usuario"} - {user?.role ?? ""}</span>
+            <span>{displayName} - {user?.role ?? ""}</span>
           </div>
         </header>
         <main className="silva-content">
