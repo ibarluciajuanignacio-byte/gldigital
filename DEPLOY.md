@@ -4,6 +4,38 @@ La app tiene **frontend (React)** y **API (Node)**. Según tu servidor, el flujo
 
 ---
 
+## Actualizar producción (flujo recomendado)
+
+Cuando terminás de desarrollar en tu PC y querés que los cambios se vean en **https://gldigital.stgrandesligas.com**:
+
+### 1. Lo que vos decís (en Cursor / al asistente)
+
+> **"Actualizá el repo y pasame el comando para el servidor"**
+
+Con eso el asistente:
+- Revisa `git status` y **sube todos los archivos modificados** del proyecto (no solo los de la conversación).
+- Hace commit, push a GitHub.
+- Te devuelve los comandos para el servidor.
+
+### 2. Lo que hacés en el servidor
+
+Siempre los mismos tres pasos (en la terminal del VPS):
+
+```bash
+cd /var/www/gldigital
+git pull
+npm run build:deploy
+pm2 restart all
+```
+
+Si `npm run build:deploy` termina **sin errores**, los cambios ya están en producción. Recargá la web (o Ctrl+Shift+R) y en **Configuración** podés ver la fecha del build desplegado.
+
+### 3. Por qué a veces no se veían los cambios
+
+Si había archivos modificados en tu PC que **no se habían agregado al commit** (por ejemplo Settings, MainLayout, estilos), el push no los incluía. El servidor hacía `git pull` de una versión vieja. Por eso el asistente, cuando pedís "actualizá el repo", debe revisar `git status` y subir todo lo pendiente.
+
+---
+
 ## Por qué no anda si solo subís la carpeta del proyecto
 
 - El **index.html** no está en la raíz del repo: está generado al hacer el **build** dentro de `apps/api/dist/public/`.

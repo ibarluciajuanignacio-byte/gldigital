@@ -8,7 +8,7 @@ function attachmentViewUrl(objectKey: string): string {
   return `${getApiBaseUrl()}/uploads/view?objectKey=${encodeURIComponent(objectKey)}`;
 }
 import { useAuth } from "../state/auth";
-import { Search, Send, Paperclip, ArrowLeft, CheckCheck } from "lucide-react";
+import { Search, Send, ArrowLeft, CheckCheck, Plus, Camera, Mic, Smile, MessageCircle, Users } from "lucide-react";
 
 type LastMessage = {
   id: string;
@@ -38,6 +38,15 @@ type ChatMessage = {
   attachments?: Array<{ id: string; objectKey?: string }>;
 };
 
+/** Emojis Unicode: se renderizan con la fuente del sistema (igual que WhatsApp por plataforma) */
+const EMOJI_GRID = [
+  "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊", "😇", "🙂", "😉", "😍", "🥰", "😘", "😗", "😋", "😛", "😜", "🤪", "😎",
+  "🤩", "🥳", "😏", "😒", "🙄", "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🥵", "🥶", "😶",
+  "👍", "👎", "👌", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "👇", "👋", "🤚", "🖐️", "✋", "🖖", "👏", "🙌", "🤝",
+  "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "😻",
+  "🔥", "⭐", "🌟", "✨", "💫", "✅", "❌", "❗", "❓", "💯", "🎉", "🎊", "🙏", "👏", "💪", "🤝", "🙈", "🙉", "🙊", "😺"
+];
+
 function avatarForId(id: string): string {
   let n = 0;
   for (let i = 0; i < id.length; i++) n += id.charCodeAt(i);
@@ -53,6 +62,14 @@ function timeAgo(date: string): string {
   const h = Math.floor(mins / 60);
   if (h < 24) return `${h} h`;
   return d.toLocaleDateString();
+}
+
+function messageTimeExact(date: string): string {
+  return new Date(date).toLocaleTimeString("es-AR", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+  });
 }
 
 function lastSeenLabel(lastSeenAt: string | null | undefined): string {
@@ -81,7 +98,10 @@ export function ChatPage() {
   const [groupName, setGroupName] = useState("");
   const [groupMembersRaw, setGroupMembersRaw] = useState("");
   const [searchChat, setSearchChat] = useState("");
+  const [plusMenuOpen, setPlusMenuOpen] = useState(false);
+  const [newGroupModalOpen, setNewGroupModalOpen] = useState(false);
   const [mobileShowConversation, setMobileShowConversation] = useState(false);
+  const plusMenuRef = useRef<HTMLDivElement>(null);
   const [typingUser, setTypingUser] = useState<{ userId: string; userName: string } | null>(null);
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
   const [globalOnlineUserIds, setGlobalOnlineUserIds] = useState<Set<string>>(new Set());
@@ -92,6 +112,10 @@ export function ChatPage() {
   const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadMoreScrollRef = useRef<{ height: number; top: number } | null>(null);
   const loadMoreJustDoneRef = useRef(false);
+  const attachInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   const socket = useMemo(() => {
     if (!token) return null;
@@ -309,6 +333,47 @@ export function ChatPage() {
     if (activeConversationId && socket) socket.emit("typing:stop", activeConversationId);
   }
 
+  function insertEmoji(emoji: string) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const newText = text.slice(0, start) + emoji + text.slice(end);
+    setText(newText);
+    queueMicrotask(() => {
+      ta.focus();
+      const pos = start + emoji.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  }
+
+  useEffect(() => {
+    if (!emojiPickerOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (emojiPickerRef.current?.contains(target)) return;
+      if (textareaRef.current?.contains(target)) return;
+      const btn = document.querySelector(".wa-emoji-picker-trigger");
+      if (btn?.contains(target)) return;
+      setEmojiPickerOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [emojiPickerOpen]);
+
+  useEffect(() => {
+    if (!plusMenuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (plusMenuRef.current?.contains(target)) return;
+      const btn = document.querySelector(".wa-plus-menu-trigger");
+      if (btn?.contains(target)) return;
+      setPlusMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [plusMenuOpen]);
+
   function scheduleTypingStart() {
     if (typingDebounceRef.current) clearTimeout(typingDebounceRef.current);
     typingDebounceRef.current = setTimeout(() => {
@@ -323,14 +388,36 @@ export function ChatPage() {
     e.preventDefault();
     if (!activeConversationId || !text.trim()) return;
     emitTypingStop();
-    await api.post("/chat/messages", {
-      conversationId: activeConversationId,
-      body: text,
-      attachmentKeys
-    });
-    setText("");
-    setAttachmentKeys([]);
-    await loadConversations();
+    const bodyToSend = text.trim();
+    const keysToSend = [...attachmentKeys];
+    try {
+      const { data } = await api.post("/chat/messages", {
+        conversationId: activeConversationId,
+        body: bodyToSend,
+        attachmentKeys: keysToSend
+      });
+      setText("");
+      setAttachmentKeys([]);
+      if (data?.id) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: data.id,
+            senderId: user?.id,
+            kind: "user",
+            body: data.body ?? bodyToSend,
+            createdAt: data.createdAt ?? new Date().toISOString(),
+            sender: { name: user?.name ?? "" },
+            attachments: data.attachments
+          } as ChatMessage
+        ]);
+      } else {
+        await loadMessages(activeConversationId);
+      }
+      await loadConversations();
+    } catch {
+      setText(bodyToSend);
+    }
   }
 
   async function createGroup(e: FormEvent) {
@@ -347,6 +434,7 @@ export function ChatPage() {
     });
     setGroupName("");
     setGroupMembersRaw("");
+    setNewGroupModalOpen(false);
     await loadConversations();
   }
 
@@ -363,25 +451,68 @@ export function ChatPage() {
   }, [conversations, searchChat, user?.id]);
 
   return (
-    <div>
-      <div className="silva-page-header">
-        <h2 className="silva-page-title">Chat interno</h2>
-        <p className="silva-page-subtitle">Organizado en formato tipo WhatsApp Web.</p>
-      </div>
+    <div className="wa-page">
       <div className={`wa-shell ${mobileShowConversation ? "wa-shell--show-conversation" : ""}`}>
         <aside className="wa-sidebar">
           <div className="wa-sidebar-top">
-            <h3 className="wa-sidebar-title">Chats</h3>
-            <span className="wa-sidebar-meta">{filteredConversations.length}</span>
+            <h1 className="wa-sidebar-title">Chats</h1>
+            <div className="wa-sidebar-actions">
+              <button type="button" className="wa-sidebar-icon-btn" aria-label="Cámara" title="Cámara">
+                <Camera size={22} strokeWidth={2} />
+              </button>
+              <div className="wa-plus-menu-wrap" ref={plusMenuRef}>
+                <button
+                  type="button"
+                  className="wa-sidebar-icon-btn wa-plus-menu-trigger"
+                  aria-label="Nuevo chat"
+                  aria-haspopup="true"
+                  aria-expanded={plusMenuOpen}
+                  title="Nuevo chat"
+                  onClick={() => setPlusMenuOpen((o) => !o)}
+                >
+                  <Plus size={22} strokeWidth={2} />
+                </button>
+                {plusMenuOpen && (
+                  <div className="wa-plus-menu" role="menu">
+                    <button
+                      type="button"
+                      className="wa-plus-menu-item"
+                      role="menuitem"
+                      onClick={() => {
+                        setPlusMenuOpen(false);
+                        // Nuevo chat: podría abrir selector de contacto
+                      }}
+                    >
+                      <MessageCircle size={20} />
+                      <span>Nuevo chat</span>
+                    </button>
+                    {user?.role === "admin" && (
+                      <button
+                        type="button"
+                        className="wa-plus-menu-item"
+                        role="menuitem"
+                        onClick={() => {
+                          setPlusMenuOpen(false);
+                          setNewGroupModalOpen(true);
+                        }}
+                      >
+                        <Users size={20} />
+                        <span>Nuevo grupo</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="wa-search">
             <div className="wa-search-wrap">
-              <Search size={16} className="wa-search-icon" />
+              <Search size={18} className="wa-search-icon" aria-hidden />
               <input
                 type="text"
                 className="wa-search-input"
-                placeholder="Buscar conversaciones..."
+                placeholder="Buscar"
                 value={searchChat}
                 onChange={(e) => setSearchChat(e.target.value)}
               />
@@ -459,31 +590,46 @@ export function ChatPage() {
               );
             })}
           </div>
-
-          {user?.role === "admin" && (
-            <form onSubmit={createGroup} className="wa-group-form">
-              <div className="wa-group-title">Nuevo grupo</div>
-              <input
-                className="wa-group-input"
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                placeholder="Nombre del grupo"
-              />
-              <input
-                className="wa-group-input"
-                value={groupMembersRaw}
-                onChange={(e) => setGroupMembersRaw(e.target.value)}
-                placeholder="IDs de usuarios (separados por coma)"
-              />
-              <button
-                type="submit"
-                className="wa-group-btn"
-              >
-                Crear grupo
-              </button>
-            </form>
-          )}
         </aside>
+
+        {newGroupModalOpen && user?.role === "admin" && (
+          <div
+            className="silva-modal-backdrop"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="wa-new-group-title"
+            onClick={() => setNewGroupModalOpen(false)}
+          >
+            <div className="silva-modal wa-new-group-modal" onClick={(e) => e.stopPropagation()}>
+              <h2 id="wa-new-group-title" className="silva-modal-title">Nuevo grupo</h2>
+              <form onSubmit={createGroup} className="wa-group-form wa-group-form--modal">
+                <label className="silva-label">Nombre del grupo</label>
+                <input
+                  className="wa-group-input silva-input"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="Nombre del grupo"
+                  autoFocus
+                />
+                <label className="silva-label">IDs de usuarios (separados por coma)</label>
+                <input
+                  className="wa-group-input silva-input"
+                  value={groupMembersRaw}
+                  onChange={(e) => setGroupMembersRaw(e.target.value)}
+                  placeholder="Ej. id1, id2, id3"
+                />
+                <div className="silva-modal-actions" style={{ marginTop: 16 }}>
+                  <button type="button" className="silva-btn" onClick={() => setNewGroupModalOpen(false)}>
+                    Cancelar
+                  </button>
+                  <button type="submit" className="silva-btn silva-btn-primary" disabled={!groupName.trim() || !groupMembersRaw.trim()}>
+                    Crear grupo
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         <section className="wa-main">
           {activeConversationId ? (
@@ -576,7 +722,7 @@ export function ChatPage() {
                           : null}
                         {message.body ? <div>{message.body}</div> : null}
                         <div className="wa-message-meta wa-message-meta-row">
-                          <span>{timeAgo(message.createdAt)}</span>
+                          <span>{messageTimeExact(message.createdAt)}</span>
                           {isMine && (
                             <span className="wa-message-ticks" aria-hidden>
                               {isRead ? (
@@ -600,29 +746,91 @@ export function ChatPage() {
               )}
 
               <form onSubmit={sendMessage} className="wa-inputbar">
-                <label className="wa-icon-btn" aria-label="Adjuntar imagen">
-                  <Paperclip size={18} />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => e.target.files?.[0] && uploadAttachment(e.target.files[0])}
-                  />
-                </label>
-                <textarea
-                  rows={1}
-                  className="wa-textarea"
-                  placeholder="Escribí un mensaje..."
-                  value={text}
+                <input
+                  ref={attachInputRef}
+                  id="wa-attach-input"
+                  type="file"
+                  accept="image/*"
+                  className="silva-file-input-hidden"
+                  aria-hidden
                   onChange={(e) => {
-                    setText(e.target.value);
-                    scheduleTypingStart();
+                    const file = e.target.files?.[0];
+                    if (file) uploadAttachment(file);
+                    e.target.value = "";
                   }}
-                  onBlur={emitTypingStop}
                 />
-                <button type="submit" className="wa-send-btn" aria-label="Enviar mensaje">
-                  <Send size={16} />
+                <label htmlFor="wa-attach-input" className="wa-icon-btn" aria-label="Adjuntar archivo o imagen" title="Adjuntar">
+                  <Plus size={22} strokeWidth={2.2} />
+                </label>
+                <div className="wa-inputbar-pill-wrap">
+                  <div className="wa-inputbar-pill">
+                    <textarea
+                      ref={textareaRef}
+                      rows={1}
+                      className="wa-textarea"
+                      placeholder=""
+                      inputMode="text"
+                      autoComplete="off"
+                      value={text}
+                      onChange={(e) => {
+                        setText(e.target.value);
+                        scheduleTypingStart();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          if (text.trim()) (e.target as HTMLTextAreaElement).form?.requestSubmit();
+                        }
+                      }}
+                      onBlur={emitTypingStop}
+                    />
+                    <button
+                      type="button"
+                      className="wa-icon-btn wa-icon-btn--inside wa-emoji-picker-trigger"
+                      aria-label="Emojis"
+                      title="Emojis"
+                      aria-expanded={emojiPickerOpen}
+                      onClick={() => setEmojiPickerOpen((open) => !open)}
+                    >
+                      <Smile size={22} strokeWidth={2} />
+                    </button>
+                  </div>
+                  {emojiPickerOpen && (
+                    <div ref={emojiPickerRef} className="wa-emoji-picker" role="dialog" aria-label="Selector de emojis">
+                      <div className="wa-emoji-picker-grid">
+                        {EMOJI_GRID.map((emoji, i) => (
+                          <button
+                            key={`${emoji}-${i}`}
+                            type="button"
+                            className="wa-emoji-picker-btn"
+                            onClick={() => insertEmoji(emoji)}
+                            aria-label={`Emoji ${emoji}`}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="wa-icon-btn"
+                  aria-label="Cámara"
+                  title="Cámara"
+                  onClick={() => attachInputRef.current?.click()}
+                >
+                  <Camera size={22} strokeWidth={2} />
                 </button>
+                {text.trim() ? (
+                  <button type="submit" className="wa-send-btn" aria-label="Enviar mensaje">
+                    <Send size={20} strokeWidth={2} />
+                  </button>
+                ) : (
+                  <button type="button" className="wa-icon-btn" aria-label="Mensaje de voz" title="Mensaje de voz">
+                    <Mic size={22} strokeWidth={2} />
+                  </button>
+                )}
               </form>
             </div>
           ) : (

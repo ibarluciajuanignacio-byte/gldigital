@@ -1,0 +1,22 @@
+---
+description: Cuando el usuario pide actualizar el repo y el comando para el servidor, revisar git status y subir TODOS los cambios pendientes antes de dar los comandos del servidor.
+globs: 
+alwaysApply: false
+---
+
+# Actualizar repo y servidor (producción GLdigital)
+
+Cuando el usuario diga algo como **"Actualizá el repo y pasame el comando para el servidor"** o **"actualiza el repo y pasame comando para pushear desde el server"**:
+
+1. **Ejecutar `git status`** en la raíz del proyecto (`Gldigital`).
+2. **Incluir en el commit** todos los archivos modificados que sean parte del proyecto (código en `apps/`, `scripts/`, `packages/`, configs del repo). No incluir archivos sin seguimiento que no sean del proyecto (PDFs, zips, etc.).
+3. Si hay cambios sin commitear: hacer `git add` de esos archivos, `git commit` con un mensaje descriptivo y `git push`.
+4. **Dar siempre** los comandos para el servidor en este orden:
+   ```bash
+   cd /var/www/gldigital
+   git pull
+   npm run build:deploy
+   pm2 restart all
+   ```
+
+Así se evita que queden cambios locales (por ej. en Settings, MainLayout, estilos) sin subir y que en producción se siga viendo la versión vieja.
